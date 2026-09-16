@@ -1,10 +1,19 @@
 # dsh-bash-terminal
 
-> Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/MAXeaglet/dsh-bash-terminal)
+> Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
 
 A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / Git Bash / MSYS2 / WSL** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
 
-![test](https://github.com/MAXeaglet/dsh-bash-terminal/actions/workflows/test.yml/badge.svg)
+![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
+
+> **TypeScript rewrite of `MAXeaglet/dsh-bash-terminal`**, with working MSYS2/MINGW64 support. Two compatibility lines:
+>
+> | Branch | DSH segment | Package name | Status |
+> |--------|-------------|--------------|--------|
+> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal` | this branch; `build` / `unit` / `apply` / `client` / `terminal` green locally |
+> | `main` | 0.1.2-alpha.1 – 0.1.2-rc.x | `dsh-bash-terminal-ts` | the TypeScript rewrite's mainline |
+>
+> The two lines **deliberately use different package names**, so they install side by side without overwriting each other. Pick the branch that covers your DSH build.
 
 ## Features
 

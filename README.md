@@ -1,10 +1,19 @@
 # dsh-bash-terminal
 
-> 🌐 [English](README.en.md) · 社区交流：[LINUX DO](https://linux.do) · [GitHub](https://github.com/MAXeaglet/dsh-bash-terminal)
+> 🌐 [English](README.en.md) · 社区交流：[LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
 
-![test](https://github.com/MAXeaglet/dsh-bash-terminal/actions/workflows/test.yml/badge.svg)
+![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
 
 DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一执行 **PowerShell / Git Bash / MSYS2 / WSL** 四种终端命令。
+
+> **本仓库是 `MAXeaglet/dsh-bash-terminal` 的 TypeScript 重写**，带可用的 MSYS2/MINGW64 支持。两条兼容线：
+>
+> | 分支 | DSH 段 | 包名 | 状态 |
+> |------|--------|------|------|
+> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal` | 本分支；`build` / `unit` / `apply` / `client` / `terminal` 本机全绿 |
+> | `main` | 0.1.2-alpha.1 – 0.1.2-rc.x | `dsh-bash-terminal-ts` | TypeScript 重写主线 |
+>
+> **两条线刻意使用不同包名**，因此可以并存安装、互不覆盖。请按你的 DSH 版本选分支。
 
 | 后端 | 实际执行 | 语法 / 路径 | 环境变量 |
 |------|----------|-------------|----------|
