@@ -95,12 +95,30 @@ const ctx: ClientTestContext = {
 };
 
 // --- load the built client bundle under a fake module loader ---
-const bundle = readFileSync(new URL("../lib/client.js", import.meta.url), "utf8");
-assert.ok(bundle.includes("window.__ModuleLoader__.load"), "bundle wrapped");
+function readBundle(rel: string): string {
+  try {
+    return readFileSync(new URL(rel, import.meta.url), "utf8");
+  } catch (error) {
+    throw new Error("built bundle missing: " + rel + " - run `npm run build` (" + String(error) + ")");
+  }
+}
+
 // DSH >= 0.1.5 regression guard: the platform seed table spells the store
 // package @deepseek-ai/dsh-client-store; the retired runtime name would miss it.
-assert.ok(bundle.includes("@deepseek-ai/dsh-client-store"), "requests the seeded client store");
-assert.ok(!bundle.includes("dsh-client-runtime"), "does not request the retired client runtime");
+// Guard EVERY shipped bundle, not just lib/client.js: package.json "files" ships
+// both lib/ and dist/, DSH's loader reads lib/client.js, and dist/client*.js is
+// the legacy compatibility copy consumed by older hosts. A regression that only
+// reaches one artifact still ships through npm, so checking a single file would
+// leave the guard blind to it.
+const BUNDLE_PATHS = ["../lib/client.js", "../dist/client.js", "../dist/client.core.js"];
+for (const rel of BUNDLE_PATHS) {
+  const text = readBundle(rel);
+  assert.ok(text.includes("@deepseek-ai/dsh-client-store"), rel + " requests the seeded client store");
+  assert.ok(!text.includes("dsh-client-runtime"), rel + " does not request the retired client runtime");
+}
+
+const bundle = readBundle("../lib/client.js");
+assert.ok(bundle.includes("window.__ModuleLoader__.load"), "bundle wrapped");
 // Menu props are captured so the rendered option list can be inspected: this
 // branch renders a Menu of items, not a <select> of <option>.
 const menuProps: { items?: { id: string; label: string }[] }[] = [];
