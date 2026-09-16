@@ -1,7 +1,7 @@
 {
   "id": "dsh-bash-terminal",
   "name": "dsh-bash-terminal",
-  "version": "0.3.17",
+  "version": "0.3.18",
   "description": {
     "en": "One shell tool that runs commands through PowerShell, Git Bash, MSYS2 or WSL on Windows, with a user-chosen default terminal in the Web UI settings.",
     "zh": "一个 shell 工具，可在 Windows 上通过 PowerShell / Git Bash / MSYS2 / WSL 执行命令，默认终端在 Web UI 设置中选择。"

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.18 (未发布)
+
+- **DSH 0.1.5 兼容线同步**（本线维护 `ts/0.1.5`）：把 0.1.2 线在分叉后的独立改动逐条核验后落到本线。
+- **标准清单补齐**：新增 `dsh.plugin.json`（`id` / `components` / `engines`）与 `screenshots.json`，两者一并加入 `files` 白名单。
+- **`engines` 收口**：`node` 由 `>=20` 升到 `>=22`，并新增 `engines.dsh` = `>=0.1.5-alpha.1 <0.2.0-0`（此前只有本线无该声明）。
+- **包身份归属修正**：`author` / `repository` / `bugs` / `homepage` 由上游 fork（MAXeaglet/dsh-bash-terminal）改为本仓库（drscrewdriver/dsh-bash-terminal-ts）。
+- **干净 checkout 可 typecheck**：`devDependencies` 补全 DSH peer 包（精确钉 `0.1.5-rc.2`）。修复前 `tsc` 报 `TS7006`（`src/client.tsx` 的 `revision` / `writable` 隐式 any）——因为 peer 只在 `peerDependencies` 声明且为 optional，`npm install` 什么都不装。因 `dsh-shell@0.1.5-rc.1` 仍声明 `0.1.2-rc.1` 的 peer，装树需 `--legacy-peer-deps`。
+- **`react-dom` 补为 devDependency**：此前 `react` 从本仓库解析、`react-dom/server` 回退到 DSH 安装树里的嵌套副本，`renderToString` 拿到两个不同的 React 实例，客户端测试报 “Objects are not valid as a React child”。补齐后 `react` 与 `react-dom` 同为 18.3.1，测试通过。
+- **明确不改名**：本线保持包名 `dsh-bash-terminal`（不跟随 0.1.2 线的 `dsh-bash-terminal-ts`），使两条线可并存安装、不在同一个包身份上冲突。
+- **核验（本机实测）**：`npm run build` exit 0；`test-dist/{unit,apply,client}.js` 各自 exit 0；`test-dist/terminal.js` 单独运行 exit 0（3/3 通过）。其中 `unit` 的 MSYS2 冒烟**真实执行**并输出 `MSYSTEM=MINGW64`、`/mingw64/bin/gcc`、`/usr/bin/bash`，即本线赖以存在的 MSYS2 环境语义得到端到端确认。
+- **已知环境性失败（非本线引入）**：链式 `npm test` 的第 4 段（`terminal.js`）在非交互控制台（无 Console 可 Attach）下报 `AttachConsole failed`；在未改动的基线上同样复现。
+
 ## 0.3.17 (2026-09-13)
 
 - **MSYS2 成为第 4 个终端后端**（`SHELLS` 顺序 powershell / gitbash / msys2 / wsl）。`Config` 新增 `msys2Path`，经 `resolveAllPaths` 接线；`SHELL_DESCRIPTIONS.msys2` 与 `toolDescription` 同步补上后端说明。
