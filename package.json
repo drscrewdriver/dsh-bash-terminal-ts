@@ -1,17 +1,17 @@
 {
   "name": "dsh-bash-terminal",
   "version": "0.3.17",
-  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, with a user-chosen default terminal in the Web UI settings.",
-  "author": "MAXeaglet",
+  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, with a user-chosen default terminal in the Web UI settings. TypeScript rewrite of MAXeaglet/dsh-bash-terminal with working MSYS2/MINGW64 support.",
+  "author": "drscrewdriver",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MAXeaglet/dsh-bash-terminal.git"
+    "url": "git+https://github.com/drscrewdriver/dsh-bash-terminal-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/MAXeaglet/dsh-bash-terminal/issues"
+    "url": "https://github.com/drscrewdriver/dsh-bash-terminal-ts/issues"
   },
-  "homepage": "https://github.com/MAXeaglet/dsh-bash-terminal#readme",
+  "homepage": "https://github.com/drscrewdriver/dsh-bash-terminal-ts#readme",
   "keywords": [
     "deepseek-harness",
     "dsh",
@@ -25,7 +25,8 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22",
+    "dsh": ">=0.1.5-alpha.1 <0.2.0-0"
   },
   "publishConfig": {
     "access": "public"
@@ -47,7 +48,9 @@
     "tsconfig.test.json",
     "README.md",
     "LICENSE",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "screenshots.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs && tsc -p tsconfig.test.json",
@@ -88,10 +91,24 @@
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-client-locale": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-store": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-llm": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-settings": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-shell": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.5-rc.2",
     "@types/node": "^22.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "esbuild": "^0.28.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "typescript": "^5.9.0"
   }
 }
