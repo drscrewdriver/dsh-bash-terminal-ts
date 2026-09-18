@@ -1,5 +1,5 @@
 {
-  "name": "dsh-bash-terminal",
+  "name": "dsh-bash-terminal-ts",
   "version": "0.5.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
