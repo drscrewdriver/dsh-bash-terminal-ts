@@ -1,6 +1,11 @@
 {
   "name": "dsh-bash-terminal",
-  "version": "0.3.18",
+  "version": "0.5.0",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "tag": "dsh-0.1.5"
+  },
   "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, with a user-chosen default terminal in the Web UI settings. TypeScript rewrite of MAXeaglet/dsh-bash-terminal with working MSYS2/MINGW64 support.",
   "author": "drscrewdriver",
   "license": "MIT",
@@ -27,9 +32,6 @@
   "engines": {
     "node": ">=22",
     "dsh": ">=0.1.5-alpha.1 <0.2.0-0"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "type": "module",
   "main": "lib/index.js",
