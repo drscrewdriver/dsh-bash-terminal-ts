@@ -20,7 +20,7 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 | Backend | Runs | Syntax / paths | Env vars |
 |---------|------|----------------|----------|
 | `powershell` (default) | `pwsh -NoLogo -NoProfile -NonInteractive -Command <cmd>` | PowerShell; `C:\\...` | `$env:NAME` |
-| `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX; `/d/WorkSpace`; PATH includes `/usr/bin` and `/mingw64/bin` | `$NAME` |
+| `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX; `/d/workspace`; PATH includes `/usr/bin` and `/mingw64/bin` | `$NAME` |
 | `msys2` | MSYS2 `bash -lc <cmd>` (`C:\msys64\usr\bin\bash.exe`) | POSIX; `/c/...`; PATH includes `/usr/bin` and `/mingw64/bin` (gcc / make) | `$NAME` (MSYSTEM=MINGW64 injected) |
 | `wsl` | `wsl [-d <distro>] -e bash -lc <cmd>` | Linux; `/mnt/d/...` | `$NAME` (via WSLENV) |
 
@@ -28,6 +28,12 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 - **Official sandbox seam**: the `shell` tool resolves the DSH sandbox policy per call and confines PowerShell argv through `ctx.sandbox` — same fail-closed `SandboxUnavailableError` semantics as the shipped executors. Git Bash, MSYS2 and WSL run unconfined: WSL is its own Linux VM, while Git Bash and MSYS2 cannot run under the DSH Windows ACL restricted-token runner (Cygwin/MSYS2 aborts with `CreateFileMapping` Win32 error 5). Official `sandbox_permissions` / `justification` escalation and denial markers included.
 - **Interactive terminal**: the `terminal` tool opens persistent real-PTY sessions over node-pty — on non-Windows via the official `ctx.subprocess.spawnTerminal` seam, on Windows directly through node-pty because the upstream seam's process inspector is POSIX-only. Actions `open` / `send` / `read` / `signal` / `close`; shell state persists across calls; sessions are managed as background jobs and auto-close when idle.
 - **Background execution** via the generic jobs registry (`run_in_background` / `job_output` / `job_kill`).
+
+## Screenshots
+
+The **Default terminal** row in Settings -> General: the user picks PowerShell / Git Bash / MSYS2 / WSL, and the `shell` tool obeys that choice — the model cannot override it.
+
+![Default terminal setting row](assets/shells.png)
 
 ## Install
 

@@ -18,11 +18,17 @@ DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一�
 | 后端 | 实际执行 | 语法 / 路径 | 环境变量 |
 |------|----------|-------------|----------|
 | `powershell`（默认） | `pwsh -NoLogo -NoProfile -NonInteractive -Command <cmd>` | PowerShell；`C:\...` | `$env:NAME` |
-| `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX；`/d/WorkSpace`；PATH 含 `/usr/bin`、`/mingw64/bin` | `$NAME` |
+| `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX；`/d/workspace`；PATH 含 `/usr/bin`、`/mingw64/bin` | `$NAME` |
 | `msys2` | MSYS2 `bash -lc <cmd>`（`C:\msys64\usr\bin\bash.exe`） | POSIX；`/c/...`；PATH 含 `/usr/bin`、`/mingw64/bin`（gcc / make） | `$NAME`（自动注入 `MSYSTEM=MINGW64`） |
 | `wsl` | `wsl [-d <distro>] -e bash -lc <cmd>` | Linux；`/mnt/d/...` | `$NAME`（经 WSLENV） |
 
 每次调用都启动全新 shell：**不保留状态**（cwd / 变量 / 别名）——请传 `workdir` 而不是用 `cd`。
+
+## 界面预览
+
+设置 → 通用 里的「默认终端」行：用户在 PowerShell / Git Bash / MSYS2 / WSL 之间选择，`shell` 工具只按这个设置执行，模型无法覆盖：
+
+![默认终端设置行](assets/shells.png)
 
 ## 设计要点
 
@@ -56,14 +62,14 @@ powershell -ExecutionPolicy Bypass -File install.ps1 install
 ```powershell
 # 1. 链接插件包到 profile 的 node_modules（junction，改源码即时生效）
 $profile = "$env:USERPROFILE\.dsh\profiles\web"
-New-Item -ItemType Junction -Path "$profile\node_modules\dsh-bash-terminal" -Target "D:\WorkSpace\projects\dsh-bash-terminal" | Out-Null
+New-Item -ItemType Junction -Path "$profile\node_modules\dsh-bash-terminal" -Target "D:\workspace\projects\dsh-bash-terminal" | Out-Null
 
 # 2. 让插件能解析 @deepseek-ai/* 依赖（junction 到 profile 的依赖树，插件与宿主共用同一份模块实例）
-New-Item -ItemType Junction -Path "D:\WorkSpace\projects\dsh-bash-terminal\node_modules\@deepseek-ai" -Target "$profile\..\node_modules\@deepseek-ai" | Out-Null
+New-Item -ItemType Junction -Path "D:\workspace\projects\dsh-bash-terminal\node_modules\@deepseek-ai" -Target "$profile\..\node_modules\@deepseek-ai" | Out-Null
 
 # 3. 让 profile 通过官方 bundle 挂载插件（install.ps1 install 会自动做；等价于在 dsh.profile.bundles 加 "dsh-bash-terminal"）
 # 4. （仅修改前端源码后）重新打包 client bundle:
-#    cd D:\WorkSpace\projects\dsh-bash-terminal && node scripts/build-client.mjs
+#    cd D:\workspace\projects\dsh-bash-terminal && node scripts/build-client.mjs
 # 5. 重启 dsh web
 ```
 
@@ -83,7 +89,7 @@ New-Item -ItemType Junction -Path "D:\WorkSpace\projects\dsh-bash-terminal\node_
 验证组合树（无需重启）：
 
 ```powershell
-node "$env:APPDATA\nvm\v24.16.0\node_modules\@deepseek-ai\dsh\lib\bin.js" --profile web --dump-config | Select-String dsh-bash-terminal
+node "$env:APPDATA\nvm\<node-version>\node_modules\@deepseek-ai\dsh\lib\bin.js" --profile web --dump-config | Select-String dsh-bash-terminal
 ```
 
 ## 使用
@@ -94,7 +100,7 @@ node "$env:APPDATA\nvm\v24.16.0\node_modules\@deepseek-ai\dsh\lib\bin.js" --prof
 
 - 默认终端 = Git Bash 时：`shell(command: "git status")` 走 Git Bash
 - 默认终端 = MSYS2 时：`shell(command: "gcc --version")` 走 MSYS2（MINGW64 环境，`/mingw64/bin` 的 gcc、make 可用）
-- 默认终端 = WSL 时：`shell(command: "ls -la /mnt/d/WorkSpace")` 走 WSL；传 `distro: "Ubuntu"` 可指定发行版
+- 默认终端 = WSL 时：`shell(command: "ls -la /mnt/d/workspace")` 走 WSL；传 `distro: "Ubuntu"` 可指定发行版
 - 默认终端 = PowerShell 时：`shell(command: "Get-Process node")` 走 PowerShell
 
 ## 模型使用示例
@@ -126,7 +132,7 @@ node "$env:APPDATA\nvm\v24.16.0\node_modules\@deepseek-ai\dsh\lib\bin.js" --prof
 npm 账号已启用 2FA 发布验证，需一次性验证码：
 
 ```powershell
-cd D:\WorkSpace\projects\dsh-bash-terminal
+cd D:\workspace\projects\dsh-bash-terminal
 npm publish --otp <验证码>   # 验证码来自你的认证器
 ```
 
@@ -188,7 +194,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 uninstall
 ## 测试
 
 ```powershell
-cd D:\WorkSpace\projects\dsh-bash-terminal
+cd D:\workspace\projects\dsh-bash-terminal
 npm install          # 安装依赖（含 typescript）
 npm run build        # tsc 编译 src/*.ts → lib/*.js；client.tsx → lib/client.js + dist/client.js；test/*.ts → test-dist/
 npm test             # node test-dist/unit.js → apply.js → client.js → terminal.js

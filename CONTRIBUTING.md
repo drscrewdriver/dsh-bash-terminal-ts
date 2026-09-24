@@ -5,7 +5,7 @@
 ## 开发
 
 ```powershell
-cd D:\WorkSpace\projects\dsh-bash-terminal
+cd D:\workspace\projects\dsh-bash-terminal
 node scripts/build-client.mjs   # 前端设置项 bundle → lib/client.js
 node test/unit.mjs              # 纯函数单测
 node test/apply.mjs             # apply/execute mock 集成

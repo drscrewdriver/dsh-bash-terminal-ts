@@ -5,7 +5,7 @@
 ## 环境
 
 - 本机运行的 DSH：`@deepseek-ai/dsh@0.1.5-rc.1`（`dsh web`，pnpm 全局安装；前端 `@deepseek-ai/dsh-web-frontend@0.1.5-rc.1`）。
-- 插件安装方式：junction `%USERPROFILE%\.dsh\profiles\web\node_modules\dsh-bash-terminal` → `D:\WorkSpace\projects\dsh-bash-terminal`。
+- 插件安装方式：junction `%USERPROFILE%\.dsh\profiles\web\node_modules\dsh-bash-terminal` → `D:\workspace\projects\dsh-bash-terminal`。
 - 插件版本：0.3.15（本次适配后）。
 
 ## 症状
@@ -71,7 +71,7 @@ react, react/jsx-runtime, react-dom, react-dom/client,
 ## 复现/验证命令
 
 ```powershell
-cd D:\WorkSpace\projects\dsh-bash-terminal
+cd D:\workspace\projects\dsh-bash-terminal
 node scripts/build-client.mjs          # 重建 bundle
 npm test                               # unit / apply / client / terminal 四套（走宿主的 0.1.5-rc.1 包）
 dsh --profile web --dump-config | Select-String dsh-bash-terminal   # 组合树
