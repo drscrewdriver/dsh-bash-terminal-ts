@@ -250,7 +250,6 @@ export interface BashTerminalContext {
     tools: ToolsSeam;
     on(event: "system-prompt/assemble", handler: AssembleHandler): void;
     shellEnv: ShellEnvSeam;
-    settings: SettingsSeam;
     sandboxPolicy: SandboxPolicySeam;
     sandbox: SandboxSeam;
     get(key: string): unknown;

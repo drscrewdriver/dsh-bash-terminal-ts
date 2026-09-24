@@ -20,6 +20,8 @@ export declare const escalationHintMarker: (subject: string) => string;
 /** Runtime config schema factory (schemastery fork). */
 export interface SchemasterySchema {
     default(value: unknown): SchemasterySchema;
+    /** 0.1.7+: expose the field on the auto-generated settings form. */
+    volatile(): SchemasterySchema;
 }
 export interface Schemastery {
     object(fields: Record<string, SchemasterySchema>): SchemasterySchema;

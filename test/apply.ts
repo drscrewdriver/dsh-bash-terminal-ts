@@ -24,14 +24,6 @@ const ctx: BashTerminalContext = {
   tools: { register: (tool) => { registered = tool; } },
   on: (event, handler) => { if (event === "system-prompt/assemble") assembleHandler = handler; },
   shellEnv: { collect: () => ({ DSH_WEB_URL: "http://127.0.0.1:3080" }) },
-  settings: {
-    register: ((ns: string, schema: unknown, options: { base: unknown }) => {
-      assert.strictEqual(String(ns), "bash-terminal", "settings namespace");
-      assert.ok(schema, "settings schema provided");
-      assert.deepStrictEqual(options.base, { defaultShell: "powershell" }, "settings base");
-      return { get: () => ({ defaultShell: userDefaultShell }) };
-    }) as BashTerminalContext["settings"]["register"]
-  },
   sandboxPolicy: {
     resolve: () => ({ mode: sandboxMode, workspaceRoot: "D:/WorkSpace", sessionId: "s1" })
   },
@@ -42,7 +34,8 @@ const ctx: BashTerminalContext = {
   effect: () => () => {},
   subprocess: null
 };
-apply(ctx, {});
+// 0.1.7: the loader hands `.volatile()` fields to apply() as live refs.
+apply(ctx, { defaultShell: { get: () => userDefaultShell } } as never);
 assert.ok(registered, "tool registered");
 const reg = registered as ToolDefinition;
 assert.strictEqual(reg.name, "shell");
@@ -202,7 +195,7 @@ assert.ok(spawnCalls.length >= 1, "background spawned");
 // invalid args throw
 await assert.rejects(() => reg.execute({ command: "", description: "t" }, exec));
 
-// settings schema rejects an out-of-enum user value
+// an out-of-enum user value fails closed at execute time (backend unresolvable)
 userDefaultShell = "fish";
 await assert.rejects(() => reg.execute({ command: "x", description: "t" }, exec));
 

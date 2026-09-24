@@ -7,8 +7,6 @@ export declare const inject: string[];
 export declare const SHELLS: readonly ["powershell", "gitbash", "msys2", "wsl"];
 /** The backend used when the caller does not name one. */
 export declare const DEFAULT_SHELL: ShellId;
-/** Settings namespace backing the user-chosen default terminal. */
-export declare const SETTINGS_NAMESPACE = "bash-terminal";
 /** Static shape of the runtime configuration schema. */
 export interface ConfigValues {
     defaultShell: string;

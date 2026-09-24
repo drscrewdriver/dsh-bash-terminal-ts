@@ -16,7 +16,8 @@ import { defineStore } from "@deepseek-ai/dsh-client-store";
 import { IconChevronDownOutline14, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
 
 const SETTINGS_NS = "settings.bash-terminal";
-const SETTINGS_NAMESPACE = "bash-terminal";
+/** Entry id of this plugin in the active profile (cordis.patch.yml). */
+const ENTRY_ID = "tool-bash-terminal";
 const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
 
 type ShellOption = (typeof SHELLS)[number];
@@ -55,7 +56,7 @@ const en: Record<string, string> = {
   "shell.wsl": "WSL"
 };
 
-export const inject = ["slots", "locale", "settingsScope"];
+export const inject = ["slots", "locale", "configForms"];
 
 /** Row state snapshot served through the settings store. */
 interface RowState {
@@ -112,23 +113,23 @@ function ShellPreferenceRow({ t, useStore, setShell }: ShellPreferenceRowProps) 
 }
 
 interface SettingsSnapshot {
-  status: string;
+  status: "loading" | "ready" | "unavailable";
   value?: { defaultShell?: string };
-  revision: number;
+  revision: number | undefined;
   writable: boolean;
 }
 
-interface SettingsScopeBinding {
+interface ConfigFormBinding {
   getSnapshot(): SettingsSnapshot;
   subscribe(fn: () => void): () => void;
-  set(field: string, value: string): void;
-  unset(): void;
+  set(field: string, value: string): Promise<boolean>;
+  unset(field: string): Promise<boolean>;
 }
 
 interface ClientContext {
   effect(fn: () => unknown, name?: string): unknown;
   locale: { register(ns: string, dicts: Record<string, Record<string, string>>): unknown };
-  settingsScope: { bind(options: { namespace: string }): SettingsScopeBinding };
+  configForms: { get(entryId: string): ConfigFormBinding };
   slots: {
     inject(slot: string, fn: () => unknown, name?: string): void;
     register(options: Record<string, unknown>, Component: unknown): Record<string, unknown>;
@@ -145,7 +146,7 @@ interface RowStore {
 
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
-  const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE });
+  const scope = ctx.configForms.get(ENTRY_ID);
   const store = defineStore<RowState, { sync: (draft: RowState, shell?: string, revision?: number, writable?: boolean) => void }>({
     init: (): RowState => ({ shell: "powershell", revision: -1, writable: false }),
     actions: {

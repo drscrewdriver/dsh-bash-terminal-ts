@@ -61,8 +61,6 @@ export const inject = ["tools", "systemPrompt", "shellEnv", "subprocess", "setti
 export const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
 /** The backend used when the caller does not name one. */
 export const DEFAULT_SHELL: ShellId = "powershell";
-/** Settings namespace backing the user-chosen default terminal. */
-export const SETTINGS_NAMESPACE = "bash-terminal";
 /** Default per-command timeout (ms). */
 const DEFAULT_TIMEOUT_MS = 120000;
 /** Upper bound a caller's timeoutMs is capped to. */
@@ -84,6 +82,11 @@ const ENV_OVERRIDES: Record<string, string> = {
   GIT_PAGER: "cat"
 };
 
+/** Live reference the 0.1.7 loader hands `apply` for `.volatile()` config fields. */
+interface VolatileRef<T> {
+  get(): T;
+}
+
 /** Static shape of the runtime configuration schema. */
 export interface ConfigValues {
   defaultShell: string;
@@ -97,7 +100,7 @@ export interface ConfigValues {
 
 /** Runtime configuration schema. */
 export const Config = z.object({
-  defaultShell: z.string().default(DEFAULT_SHELL),
+  defaultShell: z.string().default(DEFAULT_SHELL).volatile(),
   timeoutMs: z.number().default(DEFAULT_TIMEOUT_MS),
   maxTimeoutMs: z.number().default(MAX_TIMEOUT_MS),
   pwshPath: z.string().default(""),
@@ -671,15 +674,18 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   }
   const backgroundEnabled = true;
   const paths = resolveAllPaths(config);
-  const defaultShell = config.defaultShell ?? DEFAULT_SHELL;
-  if (!(SHELLS as readonly string[]).includes(defaultShell)) {
-    throw new Error(`dsh-bash-terminal: invalid defaultShell ${JSON.stringify(defaultShell)}`);
+  // 0.1.7: `defaultShell` is a `.volatile()` config field — the loader hands
+  // `apply` a live ref and the latest value is resolved on every read; there
+  // is no settings registration call anymore (removed with the 0.1.7 host).
+  const currentShell = (): string => {
+    const v = config.defaultShell as string | VolatileRef<string> | undefined;
+    if (typeof v === "string") return v;
+    const got = typeof v?.get === "function" ? v.get() : undefined;
+    return typeof got === "string" ? got : DEFAULT_SHELL;
+  };
+  if (!(SHELLS as readonly string[]).includes(currentShell())) {
+    throw new Error(`dsh-bash-terminal: invalid defaultShell ${JSON.stringify(currentShell())}`);
   }
-  const settingsScope = ctx.settings.register(
-    SETTINGS_NAMESPACE,
-    z.object({ defaultShell: z.union(SHELLS.map((s) => z.const(s))).default(defaultShell) }),
-    { base: { defaultShell } }
-  );
   /** Official sandbox-escalation surface (mirrors tool-bash): advertise the
    * escalation modes whenever the deployment confines. */
   const escalationModes = ESCALATION_TARGETS;
@@ -711,7 +717,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
 
   const toolName = "shell";
   const terminalRegistry = createTerminalRegistry(ctx);
-  ctx.tools.register(terminalTool(ctx, terminalRegistry, paths, () => settingsScope.get().defaultShell));
+  ctx.tools.register(terminalTool(ctx, terminalRegistry, paths, () => currentShell()));
 
   // The model-facing description must track the user's chosen default
   // terminal: a static description listing every backend leaves the model
@@ -720,7 +726,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // without a restart.
   ctx.on("system-prompt/assemble", async (_assembly, _context, next) => {
     const assembled = await next();
-    const description = toolDescription(backgroundEnabled, settingsScope.get().defaultShell);
+    const description = toolDescription(backgroundEnabled, currentShell());
     const tools = Array.isArray(assembled.tools)
       ? assembled.tools.map((tool) => (tool.name === toolName ? { ...tool, description } : tool))
       : assembled.tools;
@@ -729,7 +735,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
 
   ctx.tools.register(defineTool<ShellToolResult>({
     name: toolName,
-    description: toolDescription(backgroundEnabled, settingsScope.get().defaultShell),
+    description: toolDescription(backgroundEnabled, currentShell()),
     parameters: {
       command: {
         type: "string",
@@ -826,7 +832,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     },
     async execute(args, exec) {
       const v = validateArgs(args);
-      const shell = settingsScope.get().defaultShell;
+      const shell = currentShell();
       const argv0 = buildArgv(shell, v.command, paths, v.distro);
       if (argv0[0] === undefined) {
         throw new Error(`dsh-bash-terminal: ${shell} backend unavailable - executable not found. Install it or set the corresponding *Path config.`);

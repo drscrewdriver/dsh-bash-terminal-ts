@@ -1,5 +1,5 @@
 // Client plugin logic test: load lib/client.js under a mocked __ModuleLoader__
-// and exercise apply(ctx) with mocked slots/locale/settingsScope services.
+// and exercise apply(ctx) with mocked slots/locale/configForms services.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -59,12 +59,12 @@ interface ClientTestContext {
     register(options: Record<string, unknown>, Component: unknown): Record<string, unknown>;
   };
   locale: { register(ns: string, dicts: Record<string, Record<string, string>>): unknown };
-  settingsScope: {
-    bind(): {
+  configForms: {
+    get(entryId: string): {
       getSnapshot(): ScopeState;
       subscribe(): () => void;
-      set(field: string, value: string): void;
-      unset(): void;
+      set(field: string, value: string): Promise<boolean>;
+      unset(field: string): Promise<boolean>;
     };
   };
   effect(fn: () => unknown): unknown;
@@ -83,13 +83,16 @@ const ctx: ClientTestContext = {
     register: (options: Record<string, unknown>, Component: unknown) => ({ ...options, Component })
   },
   locale: { register: (ns: string, dicts: Record<string, Record<string, string>>) => { localeRegisters.push({ ns, dicts }); } },
-  settingsScope: {
-    bind: () => ({
-      getSnapshot: () => scopeState,
-      subscribe: () => () => {},
-      set: (field: string, value: string) => { setCalls.push({ field, value }); },
-      unset: () => {}
-    })
+  configForms: {
+    get: (entryId: string) => {
+      assert.strictEqual(entryId, "tool-bash-terminal", "configForms entry id");
+      return {
+        getSnapshot: () => scopeState,
+        subscribe: () => () => {},
+        set: (field: string, value: string) => { setCalls.push({ field, value }); return Promise.resolve(true); },
+        unset: () => Promise.resolve(true)
+      };
+    }
   },
   effect: (fn: () => unknown) => { fn(); }
 };
@@ -153,7 +156,7 @@ globalWithWindow.window = {
 };
 new Function(bundle)();
 assert.ok(exported, "client module exports");
-assert.deepStrictEqual(exported!.inject, ["slots", "locale", "settingsScope"]);
+assert.deepStrictEqual(exported!.inject, ["slots", "locale", "configForms"]);
 assert.strictEqual(typeof exported!.apply, "function");
 
 // --- run apply ---
