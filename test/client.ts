@@ -146,7 +146,7 @@ globalWithWindow.window = {
                 ...(props.items ?? []).map((item) => React.createElement("span", { key: item.id }, item.label))
               );
             },
-            IconChevronDownOutline14: () => null
+            IconChevronDownOutlineMedium: () => null
           };
         }
         throw new Error("unexpected require: " + name);
@@ -192,13 +192,13 @@ assert.strictEqual(
   "en dictionary has an unexpected number of shell.* keys"
 );
 
-// settings row registered into the General item slot
+// settings card registered into the family shared tab (dsh-thinking-levels hub)
 assert.strictEqual(slotRegistrations.length, 1);
-assert.strictEqual(slotRegistrations[0].slot, "settings.general.item");
+assert.strictEqual(slotRegistrations[0].slot, "dsh-family.tab");
 const regObj = slotRegistrations[0].fn() as Record<string, unknown>;
 const reg = regObj;
 const Component = regObj.Component;
-assert.strictEqual(reg.name, "settings.general.item");
+assert.strictEqual(reg.name, "dsh-family.tab");
 assert.strictEqual(reg.id, "bash-terminal-shell");
 assert.strictEqual(typeof reg.order, "number");
 assert.strictEqual(reg.locale, "settings.bash-terminal");

@@ -90,7 +90,7 @@ function ShellPreferenceRow({ t, useStore, setShell }) {
             style: !writable ? { opacity: 0.5, cursor: "not-allowed" } : void 0,
             children: [
               t("shell." + shell),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_dsh_client_ui_primitives.IconChevronDownOutline14, { className: "btChevron" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_dsh_client_ui_primitives.IconChevronDownOutlineMedium, { className: "btChevron" })
             ]
           }
         )
@@ -98,6 +98,7 @@ function ShellPreferenceRow({ t, useStore, setShell }) {
     )
   ] });
 }
+var zhDictTitle = () => zh["shell.title"] ?? "\u7EC8\u7AEF";
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
   const scope = ctx.configForms.get(ENTRY_ID);
@@ -117,12 +118,13 @@ function apply(ctx) {
     bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable);
   };
   ctx.slots.inject(
-    "settings.general.item",
+    "dsh-family.tab",
     () => ctx.slots.register(
       {
-        name: "settings.general.item",
+        name: "dsh-family.tab",
         id: "bash-terminal-shell",
-        order: 20,
+        order: 60,
+        label: () => zhDictTitle(),
         store,
         locale: SETTINGS_NS,
         inject: (actions) => {

@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { defineStore } from "@deepseek-ai/dsh-client-store";
-import { IconChevronDownOutline14, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconChevronDownOutlineMedium, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
 
 const SETTINGS_NS = "settings.bash-terminal";
 /** Entry id of this plugin in the active profile (cordis.patch.yml). */
@@ -104,7 +104,7 @@ function ShellPreferenceRow({ t, useStore, setShell }: ShellPreferenceRowProps) 
             style={!writable ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
           >
             {t("shell." + shell)}
-            <IconChevronDownOutline14 className="btChevron" />
+            <IconChevronDownOutlineMedium className="btChevron" />
           </button>
         }
       />
@@ -144,6 +144,9 @@ interface RowStore {
   actions: RowStoreActions;
 }
 
+/** 账本 label：从 zh/en 字典取「默认终端」标题（无宿主 locale 依赖）。 */
+const zhDictTitle = (): string => (zh as Record<string, string>)["shell.title"] ?? "终端";
+
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
   const scope = ctx.configForms.get(ENTRY_ID);
@@ -162,14 +165,17 @@ export function apply(ctx: ClientContext): void {
   const push = (snap: SettingsSnapshot): void => {
     bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable);
   };
+  // 插件族共用设置 tab（dsh-thinking-levels 顶级「起子插件设置」节声明该子席位）。
+  // thinking-levels 缺席时本 inject 静默等待，不阻塞客户端半。
   ctx.slots.inject(
-    "settings.general.item",
+    "dsh-family.tab",
     () =>
       ctx.slots.register(
         {
-          name: "settings.general.item",
+          name: "dsh-family.tab",
           id: "bash-terminal-shell",
-          order: 20,
+          order: 60,
+          label: () => zhDictTitle(),
           store,
           locale: SETTINGS_NS,
           inject: (actions: unknown) => {
