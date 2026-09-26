@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.4 (2026-09-26)
+
+- **修复加载失败的根因（包名分叉遗留）**：包已更名为 `dsh-bash-terminal-ts`，但 `cordis.patch.yml` 的 bundle entry `name` 仍写着分叉前的 `dsh-bash-terminal`。0.1.7 加载器按 name 解析模块必然失败（`failed to import loader entry (dsh-bash-terminal)`），连 fiber 都建不出来，热挂载与重启均无法恢复。现在 entry `name` 与包名一致，DSH 0.1.7 下正常激活。
+- **项目名称完全分叉**：`dsh.plugin.json` 的 `id` / `name`、client 注册 id、`install.ps1`（junction 路径、bundle 名、提示文案）、README / CONTRIBUTING / 兼容性文档中的项目路径与描述全部改为 `dsh-bash-terminal-ts`；仅保留 `MAXeaglet/dsh-bash-terminal`（上游仓库引用）与工具 entry id `tool-bash-terminal` 不变。`install.ps1` 的 uninstall 清理正则改为 `dsh-bash-terminal(-ts)?`，旧格式遗留块仍可清理。
+- **客户端健壮性**：设置面在宿主未提供本插件 `configForms` 条目时显示「不可用」提示行（并给出排查方向），不再静默空白。
+
 ## 0.3.18 (未发布)
 
 - **DSH 0.1.5 兼容线同步**（本线维护 `ts/0.1.5`）：把 0.1.2 线在分叉后的独立改动逐条核验后落到本线。
