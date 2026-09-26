@@ -1,4 +1,4 @@
-// dsh-bash-terminal client plugin: a "Default terminal" preference row in the
+// dsh-bash-terminal-ts client plugin: a "Default terminal" preference row in the
 // Web UI General settings, mirroring the shipped EnterBehaviorRow grammar
 // (row layout, capsule selector with chevron, --dsw-* tokens).
 //
@@ -33,7 +33,7 @@ const ROW_CSS =
   ".btChevron{flex:none}";
 if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"bash-terminal-row\"]") === null) {
   const tag = document.createElement("style");
-  tag.dataset.plugin = "dsh-bash-terminal";
+  tag.dataset.plugin = "dsh-bash-terminal-ts";
   tag.dataset.pluginCss = "bash-terminal-row";
   tag.textContent = ROW_CSS;
   document.head.appendChild(tag);
@@ -45,7 +45,8 @@ const zh: Record<string, string> = {
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
-  "shell.wsl": "WSL"
+  "shell.wsl": "WSL",
+  "shell.unavailable": "设置面不可用：宿主未提供本插件的 configForms 条目（检查 cordis.patch.yml 的 entry id）"
 };
 const en: Record<string, string> = {
   "shell.title": "Default terminal",
@@ -53,7 +54,8 @@ const en: Record<string, string> = {
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
-  "shell.wsl": "WSL"
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Settings unavailable: the host exposes no configForms entry for this plugin (check the cordis.patch.yml entry id)"
 };
 
 export const inject = ["slots", "locale", "configForms"];
@@ -63,6 +65,7 @@ interface RowState {
   shell: string;
   revision: number;
   writable: boolean;
+  status: "loading" | "ready" | "unavailable";
 }
 
 interface ShellPreferenceRowProps {
@@ -74,8 +77,19 @@ interface ShellPreferenceRowProps {
 function ShellPreferenceRow({ t, useStore, setShell }: ShellPreferenceRowProps) {
   const shell = useStore((s) => s.shell);
   const writable = useStore((s) => s.writable);
+  const status = useStore((s) => s.status);
   const [open, setOpen] = useState(false);
   const items = SHELLS.map((id) => ({ id, label: t("shell." + id) }));
+  if (status === "unavailable") {
+    return (
+      <div className="btRow">
+        <div className="btRowText">
+          <div className="btTitle">{t("shell.title")}</div>
+          <div className="btDesc">{t("shell.unavailable")}</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="btRow">
       <div className="btRowText">
@@ -137,7 +151,7 @@ interface ClientContext {
 }
 
 interface RowStoreActions {
-  sync(shell?: string, revision?: number, writable?: boolean): void;
+  sync(shell?: string, revision?: number, writable?: boolean, status?: RowState["status"]): void;
 }
 
 interface RowStore {
@@ -150,20 +164,21 @@ const zhDictTitle = (): string => (zh as Record<string, string>)["shell.title"] 
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
   const scope = ctx.configForms.get(ENTRY_ID);
-  const store = defineStore<RowState, { sync: (draft: RowState, shell?: string, revision?: number, writable?: boolean) => void }>({
-    init: (): RowState => ({ shell: "powershell", revision: -1, writable: false }),
+  const store = defineStore<RowState, { sync: (draft: RowState, shell?: string, revision?: number, writable?: boolean, status?: RowState["status"]) => void }>({
+    init: (): RowState => ({ shell: "powershell", revision: -1, writable: false, status: "loading" }),
     actions: {
-      sync: (d, shell, revision, writable) => {
+      sync: (d, shell, revision, writable, status) => {
         if (revision !== undefined && revision <= d.revision) return;
         if (shell !== undefined) d.shell = shell;
         if (revision !== undefined) d.revision = revision;
         if (writable !== undefined) d.writable = writable;
+        if (status !== undefined) d.status = status;
       }
     }
   });
   let bound: RowStoreActions | undefined;
   const push = (snap: SettingsSnapshot): void => {
-    bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable);
+    bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable, snap.status);
   };
   // 插件族共用设置 tab（dsh-thinking-levels 顶级「起子插件设置」节声明该子席位）。
   // thinking-levels 缺席时本 inject 静默等待，不阻塞客户端半。

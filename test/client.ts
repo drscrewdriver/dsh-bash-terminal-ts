@@ -130,7 +130,7 @@ const globalWithWindow = globalThis as typeof globalThis & { window?: unknown };
 globalWithWindow.window = {
   __ModuleLoader__: {
     load: ({ id, factory }: { id: string; factory: (require: (name: string) => unknown) => unknown }) => {
-      assert.strictEqual(id, "dsh-bash-terminal");
+      assert.strictEqual(id, "dsh-bash-terminal-ts");
       exported = factory((name) => {
         if (name === "@deepseek-ai/dsh-client-store") return { defineStore: mockDefineStore };
         if (name === "react/jsx-runtime" || name === "react" || name === "react-dom/server") return loadShared(name);
@@ -188,9 +188,10 @@ for (const id of hostShells) {
 assert.strictEqual(zhDict["shell.msys2"], "MSYS2", "MSYS2 label");
 assert.strictEqual(
   Object.keys(enDict).filter((k) => k.startsWith("shell.")).length,
-  hostShells.length + 2,
+  hostShells.length + 3,
   "en dictionary has an unexpected number of shell.* keys"
 );
+assert.strictEqual(typeof enDict["shell.unavailable"], "string", "unavailable fallback copy");
 
 // settings card registered into the family shared tab (dsh-thinking-levels hub)
 assert.strictEqual(slotRegistrations.length, 1);
@@ -210,7 +211,7 @@ let lastSync: unknown[] = [];
 interface InjectedFace { setShell: (value: string) => void }
 const injected = (reg.inject as (actions: unknown) => InjectedFace)({ sync: (...args: unknown[]) => { lastSync = args; } });
 assert.ok(injected && typeof injected.setShell === "function");
-assert.deepStrictEqual(lastSync, ["gitbash", 3, true], "initial snapshot pushed (user default gitbash)");
+assert.deepStrictEqual(lastSync, ["gitbash", 3, true, "ready"], "initial snapshot pushed (user default gitbash)");
 
 // setShell writes through to the settings scope
 injected.setShell("wsl");
@@ -218,7 +219,7 @@ assert.deepStrictEqual(setCalls, [{ field: "defaultShell", value: "wsl" }]);
 
 // row component renders through real React (DSH-native Menu/Button are mocked)
 const { renderToString } = loadShared("react-dom/server") as ReactDomServerLike;
-const renderState = { shell: "wsl", revision: 3, writable: true };
+const renderState = { shell: "wsl", revision: 3, writable: true, status: "ready" as const };
 const selectors: unknown[] = [];
 const fakeUseStore = (sel: (s: typeof renderState) => unknown) => { selectors.push(sel(renderState)); return selectors[selectors.length - 1]; };
 const t = (k: string) => ({ "shell.title": "默认终端", "shell.powershell": "PowerShell", "shell.gitbash": "Git Bash", "shell.msys2": "MSYS2", "shell.wsl": "WSL" }[k] ?? k);
@@ -228,7 +229,7 @@ assert.ok(html.includes("默认终端"), "row renders the title");
 assert.ok(!html.includes("AI 无法更改"), "removed the 'AI cannot change' phrase");
 assert.ok(html.includes("WSL"), "selector shows the current shell label");
 assert.ok(html.includes("btSelector"), "selector uses the official capsule class");
-assert.deepStrictEqual(selectors, ["wsl", true], "component reads shell + writable from store");
+assert.deepStrictEqual(selectors, ["wsl", true, "ready"], "component reads shell + writable + status from store");
 
 // The rendered option list covers every host shell id, in the host's order, and
 // each entry is labelled through the locale dictionary.
@@ -248,7 +249,7 @@ scopeState = { status: "ready", value: { defaultShell: "powershell" }, revision:
 // subscription when apply ran; we captured nothing, so emulate by calling
 // the register inject again with a fresh bound (fresh push uses new state).
 const injected2 = (reg.inject as (actions: unknown) => InjectedFace)({ sync: (...args: unknown[]) => { lastSync = args; } });
-assert.deepStrictEqual(lastSync, ["powershell", 4, true], "re-push after settings change");
+assert.deepStrictEqual(lastSync, ["powershell", 4, true, "ready"], "re-push after settings change");
 void injected2;
 
 console.log("CLIENT LOGIC TESTS PASSED");

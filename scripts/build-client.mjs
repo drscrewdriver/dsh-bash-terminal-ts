@@ -1,4 +1,4 @@
-// Build the browser client bundle for dsh-bash-terminal.
+// Build the browser client bundle for dsh-bash-terminal-ts.
 // Output: lib/client.js (primary, consumed by DSH loader/reload precheck) and
 // dist/client.js (legacy compatibility) — a __ModuleLoader__.load({ id, factory })
 // wrapper around the esbuild CJS bundle; shared deps (react, @deepseek-ai/*)
@@ -33,7 +33,7 @@ await build({
 
 const core = readFileSync(join(root, "dist", "client.core.js"), "utf8");
 const wrapper = `window.__ModuleLoader__.load({
-	id: "dsh-bash-terminal",
+	id: "dsh-bash-terminal-ts",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

@@ -1,4 +1,4 @@
-# dsh-bash-terminal - install/uninstall for a DSH profile.
+# dsh-bash-terminal-ts - install/uninstall for a DSH profile.
 # Usage:  powershell -ExecutionPolicy Bypass -File install.ps1 [install|uninstall] [-ProfileDir <path>]
 #
 # This script supports local source installs (it links the current checkout
@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 $pluginDir = $PSScriptRoot
 $profileDir = if ($ProfileDir) { $ProfileDir } else { Join-Path $env:USERPROFILE ".dsh\profiles\web" }
-$pluginLink = Join-Path $profileDir "node_modules\dsh-bash-terminal"
+$pluginLink = Join-Path $profileDir "node_modules\dsh-bash-terminal-ts"
 $depLink = Join-Path $pluginDir "node_modules\@deepseek-ai"
 
 function Ensure-ParentDirectory($path) {
@@ -36,7 +36,7 @@ function New-Junction($path, $target) {
 # dsh-host-apiproxy; third-party settings namespaces are refused with
 # settings-not-exposed unless listed. install patches that allowlist.
 $apiproxy = Join-Path $profileDir "..\node_modules\@deepseek-ai\dsh-host-apiproxy\lib\index.js"
-$apiproxyBak = "$apiproxy.dsh-bash-terminal.bak"
+$apiproxyBak = "$apiproxy.dsh-bash-terminal-ts.bak"
 
 function Set-ApiProxyAllowlist {
   if (-not (Test-Path $apiproxy)) {
@@ -58,7 +58,7 @@ function Set-ApiProxyAllowlist {
   Copy-Item $apiproxy $apiproxyBak -Force
   $replacement = @"
 "web-search-deepseek",
-	"bash-terminal" // dsh-bash-terminal: user-chosen default terminal
+	"bash-terminal" // dsh-bash-terminal-ts: user-chosen default terminal
 ];
 "@
   $content = $content -replace '"web-search-deepseek"\r?\n\];', $replacement
@@ -91,19 +91,19 @@ if ($Action -eq "install") {
   if (Test-Path $profilePkg) {
     $pkg = Get-Content $profilePkg -Raw | ConvertFrom-Json
     $bundles = @($pkg.dsh.profile.bundles)
-    if ($bundles -contains "dsh-bash-terminal") {
-      Write-Host "  profile already lists dsh-bash-terminal bundle."
+    if ($bundles -contains "dsh-bash-terminal-ts") {
+      Write-Host "  profile already lists dsh-bash-terminal-ts bundle."
     } else {
-      $bundles += "dsh-bash-terminal"
+      $bundles += "dsh-bash-terminal-ts"
       $pkg.dsh.profile.bundles = @($bundles | Sort-Object -Unique)
       # PS 5.1 Set-Content -Encoding UTF8 writes a BOM, which breaks JSON.parse;
       # write without BOM via .NET.
       $json = $pkg | ConvertTo-Json -Depth 6
       [System.IO.File]::WriteAllText($profilePkg, $json, (New-Object System.Text.UTF8Encoding($false)))
-      Write-Host "  added dsh-bash-terminal to dsh.profile.bundles (no BOM)."
+      Write-Host "  added dsh-bash-terminal-ts to dsh.profile.bundles (no BOM)."
     }
   } else {
-    Write-Host "  WARN: $profilePkg not found; add dsh-bash-terminal to dsh.profile.bundles manually." -ForegroundColor Yellow
+    Write-Host "  WARN: $profilePkg not found; add dsh-bash-terminal-ts to dsh.profile.bundles manually." -ForegroundColor Yellow
   }
 
   Write-Host ""
@@ -124,7 +124,7 @@ if ($Action -eq "install") {
   $patchFile = Join-Path $profileDir "cordis.patch.yml"
   if (Test-Path $patchFile) {
     $content = Get-Content $patchFile -Raw
-    $pattern = "(?s)[ \t]*# =+ dsh-bash-terminal =+.*?\n- insert:\n    - id: tool-bash-terminal\n      name: 'dsh-bash-terminal'\n*"
+    $pattern = "(?s)[ \t]*# =+ dsh-bash-terminal-ts =+.*?\n- insert:\n    - id: tool-bash-terminal\n      name: 'dsh-bash-terminal(-ts)?'\n*"
     if ($content -match $pattern) {
       $content = $content -replace $pattern, ""
       if ([string]::IsNullOrWhiteSpace($content)) {
@@ -133,26 +133,26 @@ if ($Action -eq "install") {
       [System.IO.File]::WriteAllText($patchFile, $content, (New-Object System.Text.UTF8Encoding($false)))
       Write-Host "  legacy patch block removed."
     } else {
-      Write-Host "  no legacy dsh-bash-terminal block found in patch."
+      Write-Host "  no legacy dsh-bash-terminal-ts block found in patch."
     }
   }
 
-  Write-Host "[4/4] remove dsh-bash-terminal from profile bundles ..."
+  Write-Host "[4/4] remove dsh-bash-terminal-ts from profile bundles ..."
   $profilePkg = Join-Path $profileDir "package.json"
   if (Test-Path $profilePkg) {
     $pkg = Get-Content $profilePkg -Raw | ConvertFrom-Json
     $bundles = @($pkg.dsh.profile.bundles)
-    if ($bundles -contains "dsh-bash-terminal") {
-      $bundles = @($bundles | Where-Object { $_ -ne "dsh-bash-terminal" })
+    if ($bundles -contains "dsh-bash-terminal-ts") {
+      $bundles = @($bundles | Where-Object { $_ -ne "dsh-bash-terminal-ts" })
       $pkg.dsh.profile.bundles = $bundles
       $json = $pkg | ConvertTo-Json -Depth 6
       [System.IO.File]::WriteAllText($profilePkg, $json, (New-Object System.Text.UTF8Encoding($false)))
-      Write-Host "  removed dsh-bash-terminal from dsh.profile.bundles."
+      Write-Host "  removed dsh-bash-terminal-ts from dsh.profile.bundles."
     } else {
-      Write-Host "  dsh-bash-terminal not in dsh.profile.bundles."
+      Write-Host "  dsh-bash-terminal-ts not in dsh.profile.bundles."
     }
   } else {
-    Write-Host "  WARN: $profilePkg not found; remove dsh-bash-terminal from dsh.profile.bundles manually." -ForegroundColor Yellow
+    Write-Host "  WARN: $profilePkg not found; remove dsh-bash-terminal-ts from dsh.profile.bundles manually." -ForegroundColor Yellow
   }
 
   Write-Host "Uninstalled. Restart dsh web; the shell tool disappears."

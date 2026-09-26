@@ -1,11 +1,11 @@
 # Contributing
 
-感谢你考虑为 dsh-bash-terminal 贡献！本插件遵循 DSH 官方设计语言（seam / effect / inject），请保持。
+感谢你考虑为 dsh-bash-terminal-ts 贡献！本插件遵循 DSH 官方设计语言（seam / effect / inject），请保持。
 
 ## 开发
 
 ```powershell
-cd D:\workspace\projects\dsh-bash-terminal
+cd D:\workspace\projects\dsh-bash-terminal-ts
 node scripts/build-client.mjs   # 前端设置项 bundle → lib/client.js
 node test/unit.mjs              # 纯函数单测
 node test/apply.mjs             # apply/execute mock 集成

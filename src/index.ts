@@ -1,4 +1,4 @@
-// dsh-bash-terminal - one shell tool, four Windows terminals.
+// dsh-bash-terminal-ts - one shell tool, four Windows terminals.
 //
 // Registers a model-facing shell tool. The terminal backend (powershell /
 // gitbash / msys2 / wsl) is chosen by the USER in the Web UI settings (default
@@ -324,7 +324,7 @@ function spawnSpec(resolved: SpawnResolution, argv: string[], env: Record<string
 function collectedOutput(handle: { collected: { stdout: unknown; stderr: unknown } }) {
   const { stdout, stderr } = handle.collected;
   if (!isCollectedStream(stdout) || !isCollectedStream(stderr)) {
-    throw new Error("dsh-bash-terminal: subprocess implementation dropped a requested collect stream");
+    throw new Error("dsh-bash-terminal-ts: subprocess implementation dropped a requested collect stream");
   }
   return { stdout, stderr };
 }
@@ -395,7 +395,7 @@ async function runForeground(
 function requireSubprocess(ctx: BashTerminalContext) {
   const subprocess = ctx.subprocess;
   if (subprocess === null) {
-    throw new Error("dsh-bash-terminal: ctx.subprocess seam unavailable (missing inject service)");
+    throw new Error("dsh-bash-terminal-ts: ctx.subprocess seam unavailable (missing inject service)");
   }
   return subprocess;
 }
@@ -669,7 +669,7 @@ const BACKGROUND_OUTPUT_PROPERTIES: Record<string, JsonSchemaNode> = {
 
 export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = {}): void {
   if (process.platform !== "win32") {
-    ctx.logger?.info?.("dsh-bash-terminal: only meaningful on win32; skipping tool registration");
+    ctx.logger?.info?.("dsh-bash-terminal-ts: only meaningful on win32; skipping tool registration");
     return;
   }
   const backgroundEnabled = true;
@@ -684,7 +684,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     return typeof got === "string" ? got : DEFAULT_SHELL;
   };
   if (!(SHELLS as readonly string[]).includes(currentShell())) {
-    throw new Error(`dsh-bash-terminal: invalid defaultShell ${JSON.stringify(currentShell())}`);
+    throw new Error(`dsh-bash-terminal-ts: invalid defaultShell ${JSON.stringify(currentShell())}`);
   }
   /** Official sandbox-escalation surface (mirrors tool-bash): advertise the
    * escalation modes whenever the deployment confines. */
@@ -835,7 +835,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
       const shell = currentShell();
       const argv0 = buildArgv(shell, v.command, paths, v.distro);
       if (argv0[0] === undefined) {
-        throw new Error(`dsh-bash-terminal: ${shell} backend unavailable - executable not found. Install it or set the corresponding *Path config.`);
+        throw new Error(`dsh-bash-terminal-ts: ${shell} backend unavailable - executable not found. Install it or set the corresponding *Path config.`);
       }
       // Only element 0 (the resolved executable) can be undefined; guarded above.
       const argv = argv0 as string[];

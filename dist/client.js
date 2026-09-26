@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-bash-terminal",
+	id: "dsh-bash-terminal-ts",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -38,7 +38,7 @@ var SHELLS = ["powershell", "gitbash", "msys2", "wsl"];
 var ROW_CSS = ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.btRowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.btTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.btDesc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.btSelector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.btSelector:hover{background:var(--dsw-alias-interactive-bg-hover)}.btChevron{flex:none}";
 if (typeof document !== "undefined" && document.querySelector('style[data-plugin-css="bash-terminal-row"]') === null) {
   const tag = document.createElement("style");
-  tag.dataset.plugin = "dsh-bash-terminal";
+  tag.dataset.plugin = "dsh-bash-terminal-ts";
   tag.dataset.pluginCss = "bash-terminal-row";
   tag.textContent = ROW_CSS;
   document.head.appendChild(tag);
@@ -49,7 +49,8 @@ var zh = {
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
-  "shell.wsl": "WSL"
+  "shell.wsl": "WSL",
+  "shell.unavailable": "\u8BBE\u7F6E\u9762\u4E0D\u53EF\u7528\uFF1A\u5BBF\u4E3B\u672A\u63D0\u4F9B\u672C\u63D2\u4EF6\u7684 configForms \u6761\u76EE\uFF08\u68C0\u67E5 cordis.patch.yml \u7684 entry id\uFF09"
 };
 var en = {
   "shell.title": "Default terminal",
@@ -57,14 +58,22 @@ var en = {
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
-  "shell.wsl": "WSL"
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Settings unavailable: the host exposes no configForms entry for this plugin (check the cordis.patch.yml entry id)"
 };
 var inject = ["slots", "locale", "configForms"];
 function ShellPreferenceRow({ t, useStore, setShell }) {
   const shell = useStore((s) => s.shell);
   const writable = useStore((s) => s.writable);
+  const status = useStore((s) => s.status);
   const [open, setOpen] = (0, import_react.useState)(false);
   const items = SHELLS.map((id) => ({ id, label: t("shell." + id) }));
+  if (status === "unavailable") {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "btRow", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "btRowText", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "btTitle", children: t("shell.title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "btDesc", children: t("shell.unavailable") })
+    ] }) });
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "btRow", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "btRowText", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "btTitle", children: t("shell.title") }),
@@ -108,19 +117,20 @@ function apply(ctx) {
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
   const scope = ctx.configForms.get(ENTRY_ID);
   const store = (0, import_dsh_client_store.defineStore)({
-    init: () => ({ shell: "powershell", revision: -1, writable: false }),
+    init: () => ({ shell: "powershell", revision: -1, writable: false, status: "loading" }),
     actions: {
-      sync: (d, shell, revision, writable) => {
+      sync: (d, shell, revision, writable, status) => {
         if (revision !== void 0 && revision <= d.revision) return;
         if (shell !== void 0) d.shell = shell;
         if (revision !== void 0) d.revision = revision;
         if (writable !== void 0) d.writable = writable;
+        if (status !== void 0) d.status = status;
       }
     }
   });
   let bound;
   const push = (snap) => {
-    bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable);
+    bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable, snap.status);
   };
   ctx.slots.inject(
     "dsh-family.tab",
