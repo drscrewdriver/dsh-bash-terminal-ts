@@ -1,4 +1,4 @@
-// dsh-bash-terminal client plugin: a "Default terminal" preference row in the
+// dsh-bash-terminal-ts client plugin: a "Default terminal" preference row in the
 // Web UI General settings, mirroring the shipped EnterBehaviorRow grammar
 // (row layout, capsule selector with chevron, --dsw-* tokens).
 //
@@ -32,7 +32,7 @@ const ROW_CSS =
   ".btChevron{flex:none}";
 if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"bash-terminal-row\"]") === null) {
   const tag = document.createElement("style");
-  tag.dataset.plugin = "dsh-bash-terminal";
+  tag.dataset.plugin = "dsh-bash-terminal-ts";
   tag.dataset.pluginCss = "bash-terminal-row";
   tag.textContent = ROW_CSS;
   document.head.appendChild(tag);

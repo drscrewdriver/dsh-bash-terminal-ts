@@ -8,7 +8,7 @@
 - **包身份归属修正**：`author` / `repository` / `bugs` / `homepage` 由上游 fork（MAXeaglet/dsh-bash-terminal）改为本仓库（drscrewdriver/dsh-bash-terminal-ts）。
 - **干净 checkout 可 typecheck**：`devDependencies` 补全 DSH peer 包（精确钉 `0.1.5-rc.2`）。修复前 `tsc` 报 `TS7006`（`src/client.tsx` 的 `revision` / `writable` 隐式 any）——因为 peer 只在 `peerDependencies` 声明且为 optional，`npm install` 什么都不装。因 `dsh-shell@0.1.5-rc.1` 仍声明 `0.1.2-rc.1` 的 peer，装树需 `--legacy-peer-deps`。
 - **`react-dom` 补为 devDependency**：此前 `react` 从本仓库解析、`react-dom/server` 回退到 DSH 安装树里的嵌套副本，`renderToString` 拿到两个不同的 React 实例，客户端测试报 “Objects are not valid as a React child”。补齐后 `react` 与 `react-dom` 同为 18.3.1，测试通过。
-- **明确不改名**：本线保持包名 `dsh-bash-terminal`（不跟随 0.1.2 线的 `dsh-bash-terminal-ts`），使两条线可并存安装、不在同一个包身份上冲突。
+- **明确不改名**：本线保持包名 `dsh-bash-terminal-ts`（不跟随 0.1.2 线的 `dsh-bash-terminal-ts`），使两条线可并存安装、不在同一个包身份上冲突。
 - **核验（本机实测）**：`npm run build` exit 0；`test-dist/{unit,apply,client}.js` 各自 exit 0；`test-dist/terminal.js` 单独运行 exit 0（3/3 通过）。其中 `unit` 的 MSYS2 冒烟**真实执行**并输出 `MSYSTEM=MINGW64`、`/mingw64/bin/gcc`、`/usr/bin/bash`，即本线赖以存在的 MSYS2 环境语义得到端到端确认。
 - **已知环境性失败（非本线引入）**：链式 `npm test` 的第 4 段（`terminal.js`）在非交互控制台（无 Console 可 Attach）下报 `AttachConsole failed`；在未改动的基线上同样复现。
 
@@ -62,11 +62,11 @@
 
 ## 0.3.10 (2026-08-14)
 
-- install.ps1 migrates the profile to the official bundle install (adds `dsh-bash-terminal` to `dsh.profile.bundles` and removes the legacy manual insert), writing package.json without a UTF-8 BOM (PS 5.1 `Set-Content` BOM broke DSH's JSON.parse). Current web profile verified: bundle provides the `tool-bash-terminal` entry via `--dump-config`.
+- install.ps1 migrates the profile to the official bundle install (adds `dsh-bash-terminal-ts` to `dsh.profile.bundles` and removes the legacy manual insert), writing package.json without a UTF-8 BOM (PS 5.1 `Set-Content` BOM broke DSH's JSON.parse). Current web profile verified: bundle provides the `tool-bash-terminal` entry via `--dump-config`.
 
 ## 0.3.9 (2026-08-14)
 
-- **Official bundle manifest**: the package now declares `dsh.bundle.patch` (ships its own `cordis.patch.yml`); a profile listing `dsh-bash-terminal` in `dsh.profile.bundles` auto-applies the mount — verified via a temp profile + `--dump-config` (entry appears without any manual profile patch).
+- **Official bundle manifest**: the package now declares `dsh.bundle.patch` (ships its own `cordis.patch.yml`); a profile listing `dsh-bash-terminal-ts` in `dsh.profile.bundles` auto-applies the mount — verified via a temp profile + `--dump-config` (entry appears without any manual profile patch).
 
 ## 0.3.8 (2026-08-14)
 

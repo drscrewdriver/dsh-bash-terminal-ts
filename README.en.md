@@ -1,4 +1,4 @@
-# dsh-bash-terminal
+# dsh-bash-terminal-ts
 
 > Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
 
@@ -10,7 +10,7 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 >
 > | Branch | DSH segment | Package name | Status |
 > |--------|-------------|--------------|--------|
-> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal` | this branch; `build` / `unit` / `apply` / `client` / `terminal` green locally |
+> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal-ts` | this branch; `build` / `unit` / `apply` / `client` / `terminal` green locally |
 > | `main` | 0.1.2-alpha.1 – 0.1.2-rc.x | `dsh-bash-terminal-ts` | the TypeScript rewrite's mainline |
 >
 > The two lines **deliberately use different package names**, so they install side by side without overwriting each other. Pick the branch that covers your DSH build.
@@ -37,11 +37,11 @@ The **Default terminal** row in Settings -> General: the user picks PowerShell /
 
 ## Install
 
-The package ships the official `dsh.bundle` manifest (its own `cordis.patch.yml`): listing `dsh-bash-terminal` in a profile's `dsh.profile.bundles` auto-applies the mount — no manual profile edits.
+The package ships the official `dsh.bundle` manifest (its own `cordis.patch.yml`): listing `dsh-bash-terminal-ts` in a profile's `dsh.profile.bundles` auto-applies the mount — no manual profile edits.
 
 ```powershell
-npm install -g dsh-bash-terminal
-dsh plugin --profile web add dsh-bash-terminal        # adds to profile bundles + applies the patch
+npm install -g dsh-bash-terminal-ts
+dsh plugin --profile web add dsh-bash-terminal-ts        # adds to profile bundles + applies the patch
 powershell -ExecutionPolicy Bypass -File install.ps1 install   # patches the DSH settings-UI allowlist (see below)
 # restart dsh web
 ```

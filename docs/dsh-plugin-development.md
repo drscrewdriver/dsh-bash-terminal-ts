@@ -1,4 +1,4 @@
-# DSH 插件开发沉淀（dsh-bash-terminal 实战）
+# DSH 插件开发沉淀（dsh-bash-terminal-ts 实战）
 
 从零开发一个交付级 DSH 插件（shell 三终端 + 沙箱 + 交互式 PTY + 原生设置 UI）的经验总结。
 面向"下一个 DSH 插件开发者"，按"正确范式 → 关键机制 → 踩坑清单 → 测试/CI → 发布"组织。
@@ -111,7 +111,7 @@
    停留在 0.1.0-rc.6，而宿主已经是 0.1.5）。⚠️ **npm install 会删掉这个 junction 并装一份新副本**
    （更早还曾反过来清空 junction 指向的 profile 依赖树）——依赖用 junction 时，插件项目里
    只跑 `npm install --package-lock-only`（只改 lock，不碰 node_modules）+ `npm pack --dry-run` 验证产物。
-   本机现状：`New-Item -ItemType Junction -Path D:\workspace\projects\dsh-bash-terminal\node_modules\@deepseek-ai -Target $env:USERPROFILE\.dsh\profiles\node_modules\@deepseek-ai`。
+   本机现状：`New-Item -ItemType Junction -Path D:\workspace\projects\dsh-bash-terminal-ts\node_modules\@deepseek-ai -Target $env:USERPROFILE\.dsh\profiles\node_modules\@deepseek-ai`。
 2. **PowerShell 5.1 `Set-Content -Encoding UTF8` 写 BOM** → DSH 的 JSON.parse 崩溃
    （`Unexpected token '﻿'`）。改 profile package.json 必须无 BOM
    （`[System.IO.File]::WriteAllText($p, $json, (New-Object System.Text.UTF8Encoding($false)))`）。
