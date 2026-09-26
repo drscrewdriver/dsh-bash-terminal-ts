@@ -1,4 +1,7 @@
 # Changelog
+## 0.5.2 (2026-09-26)
+
+- **包名分叉收口**：bundle entry name、包元数据、install.ps1、client id、文档全部改用 dsh-bash-terminal-ts，不再出现分叉前的 dsh-bash-terminal（仅保留上游仓库引用 MAXeaglet/dsh-bash-terminal 与工具 entry id tool-bash-terminal）。
 
 ## 0.3.18 (未发布)
 
