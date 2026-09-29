@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 (2026-09-29)
+
+- **DSH 0.2.0 兼容线**（分支 `compat/0.2.0`，npm dist-tag `dsh-0.2.0`）：11 项 `@deepseek-ai/dsh-*` peer 范围整体换代为 `>=0.2.0-rc.1 <0.2.1-0`（0.1.7 线冻结在 `compat/0.1.7` 续服旧宿主，不受影响）。0.2.0-rc.1 对插件 API 完全兼容 0.1.7，本线为零代码改动、纯元数据适配。
+- **devDependencies 同步换代**：15 个精确钉死 `0.1.7-rc.2` 的 `dsh-*` 包（11 个与 peer 同名 + scope / subprocess / sandbox-policy / http-proxy）→ `0.2.0-rc.1`，保证干净 checkout 的 build/test 对 0.2.0 宿主验证不失真。
+- **lockfile 入库**：本分支删除 `.gitignore` 中的 `package-lock.json` 忽略行，依赖树刷新后的 lockfile 随分支提交（0.1.7 线维持忽略现状）。
+- **发布元数据**：版本 0.6.4 → 0.7.0；`publishConfig.tag` `dsh-0.1.7` → `dsh-0.2.0`；`dsh.plugin.json` 的 `version` 与 `engines.dsh` 同步换代。
+- **README 兼容矩阵重排**（中英双语）：补 0.1.7 与 0.2.0 行、修正「不同包名」过时叙述（各线现共用包名 `dsh-bash-terminal-ts`，以 dist-tag 区分）、安装节兼容口径更新为 0.1.7-rc.1 / 0.2.0-rc.1 双线。
+- **验证**：`npm install` / `build` / `test` 全绿（unit / apply / client / terminal 4 段），`npm ls` 无 peer 冲突。
+
 ## 0.6.4 (2026-09-26)
 
 - **修复加载失败的根因（包名分叉遗留）**：包已更名为 `dsh-bash-terminal-ts`，但 `cordis.patch.yml` 的 bundle entry `name` 仍写着分叉前的 `dsh-bash-terminal`。0.1.7 加载器按 name 解析模块必然失败（`failed to import loader entry (dsh-bash-terminal)`），连 fiber 都建不出来，热挂载与重启均无法恢复。现在 entry `name` 与包名一致，DSH 0.1.7 下正常激活。

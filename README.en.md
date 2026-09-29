@@ -6,14 +6,16 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 
 ![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
 
-> **TypeScript rewrite of `MAXeaglet/dsh-bash-terminal`**, with working MSYS2/MINGW64 support. Two compatibility lines:
+> **TypeScript rewrite of `MAXeaglet/dsh-bash-terminal`**, with working MSYS2/MINGW64 support. Compatibility lines are cut per DSH host segment; all lines share the package name `dsh-bash-terminal-ts` and are distinguished by npm dist-tag:
 >
-> | Branch | DSH segment | Package name | Status |
-> |--------|-------------|--------------|--------|
-> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal-ts` | this branch; `build` / `unit` / `apply` / `client` / `terminal` green locally |
-> | `main` | 0.1.2-alpha.1 – 0.1.2-rc.x | `dsh-bash-terminal-ts` | the TypeScript rewrite's mainline |
+> | DSH segment | Branch | Plugin series | npm dist-tag |
+> |-------------|--------|---------------|--------------|
+> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (this branch) | 0.7.x | `dsh-0.2.0` |
+> | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
+> | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5` (historical, frozen) | ≤ 0.5.2 | `dsh-0.1.5` |
+> | 0.1.2-alpha.1 – 0.1.2-rc.x | `main` (historical, frozen) | ≤ 0.4.2 | `dsh-0.1.2` |
 >
-> The two lines **deliberately use different package names**, so they install side by side without overwriting each other. Pick the branch that covers your DSH build.
+> Pick the line that covers your DSH build; the version series never overlap, so a `^` install cannot resolve across lines.
 
 ## Features
 

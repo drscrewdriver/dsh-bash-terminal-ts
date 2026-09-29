@@ -6,14 +6,16 @@
 
 DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一执行 **PowerShell / Git Bash / MSYS2 / WSL** 四种终端命令。
 
-> **本仓库是 `MAXeaglet/dsh-bash-terminal` 的 TypeScript 重写**，带可用的 MSYS2/MINGW64 支持。两条兼容线：
+> **本仓库是 `MAXeaglet/dsh-bash-terminal` 的 TypeScript 重写**，带可用的 MSYS2/MINGW64 支持。兼容线按 DSH 宿主段划分，各线共用包名 `dsh-bash-terminal-ts`，以 npm dist-tag 区分：
 >
-> | 分支 | DSH 段 | 包名 | 状态 |
-> |------|--------|------|------|
-> | `ts/0.1.5` | 0.1.5-alpha.1 – 0.1.5-rc.x | `dsh-bash-terminal-ts` | 本分支；`build` / `unit` / `apply` / `client` / `terminal` 本机全绿 |
-> | `main` | 0.1.2-alpha.1 – 0.1.2-rc.x | `dsh-bash-terminal-ts` | TypeScript 重写主线 |
+> | DSH 段 | 分支 | 插件版本 | npm dist-tag |
+> |--------|------|----------|--------------|
+> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0`（本分支） | 0.7.x | `dsh-0.2.0` |
+> | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
+> | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5`（历史，冻结） | ≤ 0.5.2 | `dsh-0.1.5` |
+> | 0.1.2-alpha.1 – 0.1.2-rc.x | `main`（历史，冻结） | ≤ 0.4.2 | `dsh-0.1.2` |
 >
-> **两条线刻意使用不同包名**，因此可以并存安装、互不覆盖。请按你的 DSH 版本选分支。
+> 请按你的 DSH 版本选线安装；各线版本系列互不重叠，`^` 安装不会跨线解析。
 
 | 后端 | 实际执行 | 语法 / 路径 | 环境变量 |
 |------|----------|-------------|----------|
@@ -77,7 +79,8 @@ New-Item -ItemType Junction -Path "D:\workspace\projects\dsh-bash-terminal-ts\no
 > `@deepseek-ai/*` 副本 —— 插件和宿主就不再共用模块实例，宿主升级后插件会停在旧 API 上
 > （本项目曾因此停在 0.1.0-rc.6）。只刷新 lock 时用 `npm install --package-lock-only`。
 
-> **兼容性**：要求 DSH ≥ **0.1.5-rc.1**。0.1.5 把浏览器模块表里的 `@deepseek-ai/dsh-client-runtime`
+> **兼容性**：要求 DSH ≥ **0.1.7-rc.1**（`compat/0.1.7` 线）或 ≥ **0.2.0-rc.1**（`compat/0.2.0` 线，本分支）。
+> 历史背景：0.1.5 把浏览器模块表里的 `@deepseek-ai/dsh-client-runtime`
 > 改名为 `@deepseek-ai/dsh-client-store` 且只按精确裸名命中；旧 bundle 在新宿主上会报
 > `Failed to load plugins` / `require(...) missed the module table`。
 >
