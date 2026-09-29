@@ -22,8 +22,7 @@ import type {
   JobsRegistry,
   ResolvedPaths,
   TerminalHandle,
-  TerminalSpawnSpec,
-  ToolRunContext
+  TerminalSpawnSpec
 } from "./dsh-types.js";
 
 const MAX_BUFFER_BYTES = 1024 * 1024;

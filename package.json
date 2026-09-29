@@ -56,7 +56,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs && tsc -p tsconfig.test.json",
     "build:client": "node scripts/build-client.mjs",
-    "test": "node test-dist/unit.js && node test-dist/apply.js && node test-dist/client.js && node test-dist/terminal.js"
+    "test": "node test-dist/unit.js && node test-dist/apply.js && node test-dist/client.js && node test-dist/terminal.js",
+    "lint": "eslint ."
   },
   "dsh": {
     "bundle": {
@@ -114,6 +115,11 @@
     "@deepseek-ai/dsh-scope": "0.1.7-rc.2",
     "@deepseek-ai/dsh-subprocess": "0.1.7-rc.2",
     "@deepseek-ai/dsh-sandbox-policy": "0.1.7-rc.2",
-    "@deepseek-ai/dsh-http-proxy": "0.1.7-rc.2"
+    "@deepseek-ai/dsh-http-proxy": "0.1.7-rc.2",
+    "eslint": "^10.11.0",
+    "typescript-eslint": "^8.71.0",
+    "@eslint/js": "^10.0.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0"
   }
 }
