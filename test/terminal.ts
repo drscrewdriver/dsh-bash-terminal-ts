@@ -209,7 +209,11 @@ if (wslOpened !== undefined) {
     || wslOut.output.includes("RPC")
     || wslOut.output.includes("not installed")
     || wslOut.output.includes("E_UNEXPECTED")
-    || wslOut.output.includes("Wsl/Service");
+    || wslOut.output.includes("Wsl/Service")
+    // VM networking-provisioning failures (mirrored-networking setup crash):
+    // the distro boots but the shell never comes up — same environment limit.
+    || wslOut.output.includes("0x8007054f")
+    || wslOut.output.includes("ConfigureNetworking");
   if (wslFailed) {
     console.log("NOTE: wsl.exe interactive unavailable in this environment (no distro / ConPTY RPC error); skipping assertion");
   } else {
