@@ -99,7 +99,7 @@ function readBundle(rel: string): string {
   try {
     return readFileSync(new URL(rel, import.meta.url), "utf8");
   } catch (error) {
-    throw new Error("built bundle missing: " + rel + " - run `npm run build` (" + String(error) + ")");
+    throw new Error("built bundle missing: " + rel + " - run `npm run build` (" + String(error) + ")", { cause: error });
   }
 }
 

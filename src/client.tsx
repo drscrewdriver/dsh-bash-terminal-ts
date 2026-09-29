@@ -19,8 +19,6 @@ const SETTINGS_NS = "settings.bash-terminal";
 const SETTINGS_NAMESPACE = "bash-terminal";
 const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
 
-type ShellOption = (typeof SHELLS)[number];
-
 // Injected once when the browser loads the bundle (node tests guard on document).
 const ROW_CSS =
   ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}" +
@@ -137,10 +135,6 @@ interface ClientContext {
 
 interface RowStoreActions {
   sync(shell?: string, revision?: number, writable?: boolean): void;
-}
-
-interface RowStore {
-  actions: RowStoreActions;
 }
 
 export function apply(ctx: ClientContext): void {
