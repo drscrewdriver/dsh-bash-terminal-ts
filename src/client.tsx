@@ -55,6 +55,51 @@ const en: Record<string, string> = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Settings unavailable: the host exposes no configForms entry for this plugin (check the cordis.patch.yml entry id)"
 };
+const fr: Record<string, string> = {
+  "shell.title": "Terminal par défaut",
+  "shell.description": "Terminal utilisé par l'outil shell",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Paramètres indisponibles : l'hôte n'expose aucune entrée configForms pour ce plugin (vérifiez l'entry id du cordis.patch.yml)"
+};
+const de: Record<string, string> = {
+  "shell.title": "Standard-Terminal",
+  "shell.description": "Terminal, das vom Shell-Tool verwendet wird",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Einstellungen nicht verfügbar: Der Host stellt keinen configForms-Eintrag für dieses Plugin bereit (Entry-ID in cordis.patch.yml prüfen)"
+};
+const it: Record<string, string> = {
+  "shell.title": "Terminale predefinito",
+  "shell.description": "Terminale usato dallo strumento shell",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Impostazioni non disponibili: l'host non espone alcuna voce configForms per questo plugin (verifica l'entry id in cordis.patch.yml)"
+};
+const ru: Record<string, string> = {
+  "shell.title": "Терминал по умолчанию",
+  "shell.description": "Терминал, используемый инструментом shell",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Настройки недоступны: хост не предоставляет запись configForms для этого плагина (проверьте entry id в cordis.patch.yml)"
+};
+const es: Record<string, string> = {
+  "shell.title": "Terminal predeterminado",
+  "shell.description": "Terminal que usa la herramienta shell",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Configuración no disponible: el host no expone ninguna entrada configForms para este plugin (comprueba el entry id de cordis.patch.yml)"
+};
 
 export const inject = ["slots", "locale", "configForms"];
 
@@ -156,7 +201,10 @@ interface RowStoreActions {
 const zhDictTitle = (): string => (zh as Record<string, string>)["shell.title"] ?? "终端";
 
 export function apply(ctx: ClientContext): void {
-  ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), "bash-terminal: settings dictionaries");
+  // Single call for every locale: the registry rejects a duplicate
+  // (namespace, locale) pair, so one bundle keeps the namespace atomic
+  // (fr/de/it/ru/es ride the untyped dicts overload; only zh/en are built in).
+  ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en, fr, de, it, ru, es }), "bash-terminal: settings dictionaries");
   const scope = ctx.configForms.get(ENTRY_ID);
   const store = defineStore<RowState, { sync: (draft: RowState, shell?: string, revision?: number, writable?: boolean, status?: RowState["status"]) => void }>({
     init: (): RowState => ({ shell: "powershell", revision: -1, writable: false, status: "loading" }),
