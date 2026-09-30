@@ -59,6 +59,24 @@ powershell -ExecutionPolicy Bypass -File install.ps1 install
 
 > 已用临时 profile 实测：`bundles: [dsh-bash-terminal-ts]` → dump-config 自动出现 `tool-bash-terminal` entry。
 
+### pnpm 用户须知：node-pty 构建脚本放行
+
+本插件依赖原生 PTY 库 [`node-pty`](https://www.npmjs.com/package/node-pty)（微软维护，VS Code 同款）实现交互终端。**自 0.7.1 起钉在 `1.2.0-beta.15`**（与 DSH 宿主两条版本线同版）：该线 tarball 自带全平台预编译产物，pnpm 10+ 即使拦截安装脚本，运行时加载器也会兜底从 `prebuilds/<platform>-<arch>/` 加载，**不编译即可运行**。`pnpm add` 末尾的下述提示只是告知脚本被跳过，放行一次即可消除：
+
+```text
+Error: ERR_PNPM_IGNORED_BUILDS
+  Ignored build scripts: node-pty@1.2.0-beta.15
+```
+
+```powershell
+pnpm approve-builds      # 交互式勾选 node-pty
+# 或在 profile 的 package.json 声明后重建：
+#   "pnpm": { "onlyBuiltDependencies": ["node-pty"] }
+pnpm rebuild node-pty
+```
+
+> 自有 dsh 插件中**仅本插件**带原生依赖；其余 0.2.0 线插件（search-index、session-steward、patch-edit-plus、browser-cdp、date-wrapper）与 live-token-stats 均为纯 JS 包，pnpm 直接安装即可，无需放行。
+
 ### 本地开发安装（junction 直连，改源码即时生效）
 
 ```powershell

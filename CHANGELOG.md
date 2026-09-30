@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 (2026-10-01)
+
+- **`node-pty` 钉版对齐宿主**：`^1.1.0` → `1.2.0-beta.15`（精确钉）。DSH 宿主 `@deepseek-ai/dsh-subprocess-local` 的 0.1.7 与 0.2.0 两线均钉此版；1.1.0 稳定线无预编译产物、安装必跑 node-gyp 本地编译，beta 线 tarball 自带全平台预编译产物（win32 的 `conpty.node` / `conpty.dll` / `OpenConsole.exe` 均随包分发），安装脚本被拦截时运行时加载器兜底查 `prebuilds/<platform>-<arch>/`，不编译也能加载。
+- **win32 直连路径适配 beta 线的异步 pid**：1.2.0-beta 的 ConPTY dll 路径要等 agent 连上数据管道才赋 `innerPid`，spawn 返回时 `pid` 读作 0；`spawnPtyHandle` 新增 `waitForPid`（25ms 轮询 / 5s 超时，超时杀会话并报错），open 返回值、会话列表与终止路径拿到的都是真实 pid。1.1.x（0.1.7 线）pid 同步可得，此等待零开销直通。
+- **README（中英）新增 pnpm 放行说明**：pnpm 10+ 按「依赖是否声明 lifecycle 脚本」拦截（与脚本实际行为无关），`pnpm add` 末尾报 `ERR_PNPM_IGNORED_BUILDS`（软提示，安装本身不失败）；消除提示用 `pnpm approve-builds` 勾选 node-pty，或在 profile 的 `package.json` / workspace 配置声明 `onlyBuiltDependencies` / `allowBuilds`。自有 dsh 插件中仅本插件带原生依赖。
+- **验证**：`npm install` / `build` / `test` 全绿（unit / apply / client / terminal 4 段），`npm ls` 无 peer 冲突。
+
 ## 0.7.0 (2026-09-29)
 
 - **DSH 0.2.0 兼容线**（分支 `compat/0.2.0`，npm dist-tag `dsh-0.2.0`）：11 项 `@deepseek-ai/dsh-*` peer 范围整体换代为 `>=0.2.0-rc.1 <0.2.1-0`（0.1.7 线冻结在 `compat/0.1.7` 续服旧宿主，不受影响）。0.2.0-rc.1 对插件 API 完全兼容 0.1.7，本线为零代码改动、纯元数据适配。

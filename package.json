@@ -1,6 +1,6 @@
 {
   "name": "dsh-bash-terminal-ts",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publishConfig": {
     "tag": "dsh-0.2.0"
   },
@@ -90,7 +90,7 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.4",
-    "node-pty": "^1.1.0"
+    "node-pty": "1.2.0-beta.15"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",

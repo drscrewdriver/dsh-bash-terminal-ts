@@ -50,6 +50,24 @@ powershell -ExecutionPolicy Bypass -File install.ps1 install   # patches the DSH
 
 > **DSH limitation**: the Web settings client only exposes a hard-coded allowlist of settings namespaces (`dsh-host-apiproxy`); third-party settings writes are refused with `settings-not-exposed` otherwise. `install.ps1` patches the allowlist (with a backup) — re-run it after upgrading DSH; `install` / `uninstall` restores it.
 
+### pnpm users: the node-pty build-script notice
+
+This plugin depends on the native PTY library [`node-pty`](https://www.npmjs.com/package/node-pty) (Microsoft-maintained, the same library VS Code uses) for the interactive `terminal` tool. **As of 0.7.1 it is pinned to `1.2.0-beta.15`** (the same version both DSH host lines use): the tarball ships prebuilt binaries for every platform, so even when pnpm 10+ skips the install script, the runtime loader falls back to `prebuilds/<platform>-<arch>/` and **runs without compiling**. The notice at the end of `pnpm add` only reports the skipped script; approve once to silence it:
+
+```text
+Error: ERR_PNPM_IGNORED_BUILDS
+  Ignored build scripts: node-pty@1.2.0-beta.15
+```
+
+```powershell
+pnpm approve-builds      # pick node-pty interactively
+# or declare it in the profile's package.json, then rebuild:
+#   "pnpm": { "onlyBuiltDependencies": ["node-pty"] }
+pnpm rebuild node-pty
+```
+
+> This is the **only** own dsh plugin with a native dependency; the other 0.2.0-line plugins (search-index, session-steward, patch-edit-plus, browser-cdp, date-wrapper) and live-token-stats are pure-JS and install on pnpm without any approval.
+
 For local development (junction install, source changes apply instantly) see the Chinese README's development section.
 
 ## Sandbox
