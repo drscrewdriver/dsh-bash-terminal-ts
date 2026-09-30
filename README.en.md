@@ -1,6 +1,12 @@
 # dsh-bash-terminal-ts
 
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Русский](README.ru.md) | [Español](README.es.md)
+
 > Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
+- [Installation guide](./INSTALL.md)
+- [中文安装指南](./INSTALL.zh.md)
+- [日本語インストールガイド](./INSTALL.ja.md)
+- [한국어 설치 안내](./INSTALL.ko.md)
 
 A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / Git Bash / MSYS2 / WSL** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
 
@@ -47,6 +53,26 @@ powershell -ExecutionPolicy Bypass -File install.ps1 install   # patches the DSH
 ```
 
 > **DSH limitation**: the Web settings client only exposes a hard-coded allowlist of settings namespaces (`dsh-host-apiproxy`); third-party settings writes are refused with `settings-not-exposed` otherwise. `install.ps1` patches the allowlist (with a backup) — re-run it after upgrading DSH; `install` / `uninstall` restores it.
+
+### pnpm users: approve the node-pty build script
+
+This plugin depends on the native PTY library [`node-pty`](https://www.npmjs.com/package/node-pty) (Microsoft-maintained, the same library VS Code uses) for the interactive `terminal` tool, and its install script compiles a native binding. npm runs dependency install scripts by default — nothing to do. **pnpm ≥10 blocks them**, so `pnpm add` ends with:
+
+```text
+Error: ERR_PNPM_IGNORED_BUILDS
+  Ignored build scripts: node-pty@1.1.0
+```
+
+The package is installed, but the native binding was never built, so the interactive `terminal` tool fails to start. Approve it once:
+
+```powershell
+pnpm approve-builds      # pick node-pty interactively
+# or declare it in the profile's package.json, then rebuild:
+#   "pnpm": { "onlyBuiltDependencies": ["node-pty"] }
+pnpm rebuild node-pty
+```
+
+> This is the **only** own dsh plugin with a native dependency; the other 0.2.0-line plugins (search-index, session-steward, patch-edit-plus, browser-cdp, date-wrapper) and live-token-stats are pure-JS and install on pnpm without any approval.
 
 For local development (junction install, source changes apply instantly) see the Chinese README's development section.
 

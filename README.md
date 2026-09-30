@@ -1,6 +1,12 @@
 # dsh-bash-terminal-ts
 
-> 🌐 [English](README.en.md) · 社区交流：[LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Русский](README.ru.md) | [Español](README.es.md)
+
+> 社区交流：[LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
+- [Installation guide](./INSTALL.md)
+- [中文安装指南](./INSTALL.zh.md)
+- [日本語インストールガイド](./INSTALL.ja.md)
+- [한국어 설치 안내](./INSTALL.ko.md)
 
 ![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
 
@@ -56,6 +62,26 @@ powershell -ExecutionPolicy Bypass -File install.ps1 install
 ```
 
 > 已用临时 profile 实测：`bundles: [dsh-bash-terminal-ts]` → dump-config 自动出现 `tool-bash-terminal` entry。
+
+### pnpm 用户须知：放行 node-pty 构建脚本
+
+本插件依赖原生 PTY 库 [`node-pty`](https://www.npmjs.com/package/node-pty)（微软维护，VS Code 同款）实现交互终端，安装时需执行其编译脚本。npm 默认执行依赖的 install 脚本，无需任何操作；**pnpm ≥10 默认拦截**，`pnpm add` 末尾会报：
+
+```text
+Error: ERR_PNPM_IGNORED_BUILDS
+  Ignored build scripts: node-pty@1.1.0
+```
+
+此时包已装上，但原生绑定未编译，`terminal` 工具（交互终端）会启动失败。放行一次即可：
+
+```powershell
+pnpm approve-builds      # 交互式勾选 node-pty
+# 或在 profile 的 package.json 声明后重建：
+#   "pnpm": { "onlyBuiltDependencies": ["node-pty"] }
+pnpm rebuild node-pty
+```
+
+> 自有 dsh 插件中**仅本插件**带原生依赖；其余 0.2.0 线插件（search-index、session-steward、patch-edit-plus、browser-cdp、date-wrapper）与 live-token-stats 均为纯 JS 包，pnpm 直接安装即可，无需 approve-builds。
 
 ### 本地开发安装（junction 直连，改源码即时生效）
 
