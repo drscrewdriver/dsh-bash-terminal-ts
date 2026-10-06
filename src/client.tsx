@@ -1,35 +1,26 @@
-// dsh-bash-terminal-ts client plugin: a "Default terminal" preference row in the
-// Web UI General settings, mirroring the shipped EnterBehaviorRow grammar
-// (row layout, capsule selector with chevron, --dsw-* tokens).
+// dsh-bash-terminal-ts client plugin (compat-legacy): a "Default terminal"
+// preference row contributed to the family settings tab (dsh-family.tab,
+// hosted by dsh-thinking-levels), with a shell.overlay floating-gear fallback
+// for hosts without any settings surface (0.1.0/0.1.1).
 //
-// The row offers one entry per host shell id — powershell / gitbash / msys2 /
-// wsl — in the same order as SHELLS in ./index.ts.
-//
-// DSH >= 0.1.5: the browser module table (PLATFORM_MODULES) seeds react,
-// @deepseek-ai/cordis, @deepseek-ai/dsh-client-store, @deepseek-ai/dsh-client-ui-slots,
-// @deepseek-ai/dsh-client-ui-primitives and @deepseek-ai/dsh-client-ui-dockkit by
-// exact bare specifier. The old dsh-client-runtime name is gone from that table
-// (and so is its /client subpath), so this bundle requests dsh-client-store.
+// compat-legacy rewiring vs upstream 0.7.1:
+//  - no @deepseek-ai/dsh-client-store / dsh-client-ui-primitives requires:
+//    0.1.0/0.1.1 have no browser module table and 0.1.2 is unverified; the
+//    row reads/writes defaultShell through the host config bridge
+//    (GET/POST /api/bash-terminal/config) which works on every line.
+//  - ui-primitives Menu/Icon replaced by a native select (same capsule CSS).
+//  - every surface registration is independently guarded (one unknown slot
+//    name on one line must not take down the rest).
 
-import { useState } from "react";
-import { defineStore } from "@deepseek-ai/dsh-client-store";
-import { IconChevronDownOutlineMedium, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
+import { useEffect, useState } from "react";
 
 const SETTINGS_NS = "settings.bash-terminal";
-/** Entry id of this plugin in the active profile (cordis.patch.yml). */
-const ENTRY_ID = "tool-bash-terminal";
 const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
 
 // Injected once when the browser loads the bundle (node tests guard on document).
 const ROW_CSS =
-  ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}" +
-  ".btRowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}" +
-  ".btTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}" +
-  ".btDesc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}" +
-  ".btSelector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}" +
-  ".btSelector:hover{background:var(--dsw-alias-interactive-bg-hover)}" +
-  ".btChevron{flex:none}";
-if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"bash-terminal-row\"]") === null) {
+  ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.btRowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.btTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.btDesc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.btSelector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.btSelector:hover{background:var(--dsw-alias-interactive-bg-hover)}.btGear{position:fixed;right:16px;bottom:110px;z-index:10000;width:40px;height:40px;border-radius:50%;border:1px solid rgba(127,127,127,.4);background:rgba(30,30,32,.85);color:inherit;cursor:pointer;font-size:17px;box-shadow:0 4px 16px rgba(0,0,0,.35)}.btOverlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45)}.btPanel{position:fixed;top:6vh;left:50%;transform:translateX(-50%);width:min(760px,92vw);max-height:84vh;overflow-y:auto;z-index:10001;background:var(--dsw-alias-bg-module-platform,rgba(30,30,32,.92));border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.3));border-radius:14px;padding:20px;color:var(--dsw-alias-label-primary)}";
+if (typeof document !== "undefined" && document.querySelector('style[data-plugin-css="bash-terminal-row"]') === null) {
   const tag = document.createElement("style");
   tag.dataset.plugin = "dsh-bash-terminal-ts";
   tag.dataset.pluginCss = "bash-terminal-row";
@@ -44,7 +35,7 @@ const zh: Record<string, string> = {
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "设置面不可用：宿主未提供本插件的 configForms 条目（检查 cordis.patch.yml 的 entry id）"
+  "shell.unavailable": "设置面不可用:宿主配置桥未响应(检查宿主是否为 compat 版)"
 };
 const en: Record<string, string> = {
   "shell.title": "Default terminal",
@@ -53,7 +44,7 @@ const en: Record<string, string> = {
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Settings unavailable: the host exposes no configForms entry for this plugin (check the cordis.patch.yml entry id)"
+  "shell.unavailable": "Settings unavailable: the host config bridge did not respond (is the host a compat build?)"
 };
 const fr: Record<string, string> = {
   "shell.title": "Terminal par défaut",
@@ -62,73 +53,104 @@ const fr: Record<string, string> = {
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Paramètres indisponibles : l'hôte n'expose aucune entrée configForms pour ce plugin (vérifiez l'entry id du cordis.patch.yml)"
+  "shell.unavailable": "Paramètres indisponibles: le pont de configuration de l'hôte n'a pas répondu"
 };
 const de: Record<string, string> = {
-  "shell.title": "Standard-Terminal",
-  "shell.description": "Terminal, das vom Shell-Tool verwendet wird",
+  "shell.title": "Standardterminal",
+  "shell.description": "Terminal für den Shell-Befehl",
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Einstellungen nicht verfügbar: Der Host stellt keinen configForms-Eintrag für dieses Plugin bereit (Entry-ID in cordis.patch.yml prüfen)"
+  "shell.unavailable": "Einstellungen nicht verfügbar: Die Konfigurationsbrücke des Hosts hat nicht geantwortet"
 };
 const it: Record<string, string> = {
   "shell.title": "Terminale predefinito",
-  "shell.description": "Terminale usato dallo strumento shell",
+  "shell.description": "Terminale usato dal comando shell",
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Impostazioni non disponibili: l'host non espone alcuna voce configForms per questo plugin (verifica l'entry id in cordis.patch.yml)"
+  "shell.unavailable": "Impostazioni non disponibili: il bridge di configurazione dell'host non ha risposto"
 };
 const ru: Record<string, string> = {
   "shell.title": "Терминал по умолчанию",
-  "shell.description": "Терминал, используемый инструментом shell",
+  "shell.description": "Терминал для команд оболочки",
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Настройки недоступны: хост не предоставляет запись configForms для этого плагина (проверьте entry id в cordis.patch.yml)"
+  "shell.unavailable": "Настройки недоступны: мост конфигурации хоста не ответил"
 };
 const es: Record<string, string> = {
-  "shell.title": "Terminal predeterminado",
-  "shell.description": "Terminal que usa la herramienta shell",
+  "shell.title": "Terminal predeterminada",
+  "shell.description": "Terminal usada por el comando shell",
   "shell.powershell": "PowerShell",
   "shell.gitbash": "Git Bash",
   "shell.msys2": "MSYS2",
   "shell.wsl": "WSL",
-  "shell.unavailable": "Configuración no disponible: el host no expone ninguna entrada configForms para este plugin (comprueba el entry id de cordis.patch.yml)"
+  "shell.unavailable": "Configuración no disponible: el puente de configuración del host no respondió"
 };
 
-export const inject = ["slots", "locale", "configForms"];
+const zhDictTitle = (): string => zh["shell.title"] ?? "Terminal";
 
-/** Row state snapshot served through the settings store. */
-interface RowState {
-  shell: string;
-  revision: number;
-  writable: boolean;
-  status: "loading" | "ready" | "unavailable";
+async function bridgeConfig(): Promise<{ defaultShell?: string } | null> {
+  try {
+    const r = await fetch("/api/bash-terminal/config", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const d = await r.json();
+    return d && d.ok ? (d.value as { defaultShell?: string }) : null;
+  } catch {
+    return null;
+  }
 }
 
-interface ShellPreferenceRowProps {
-  t: (key: string) => string;
-  useStore: <S>(selector: (state: RowState) => S) => S;
-  setShell: (id: string) => void;
+async function bridgeWrite(value: string): Promise<boolean> {
+  try {
+    const r = await fetch("/api/bash-terminal/config", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ defaultShell: value }),
+    });
+    const d = await r.json();
+    return !!(d && d.ok);
+  } catch {
+    return false;
+  }
 }
 
-function ShellPreferenceRow({ t, useStore, setShell }: ShellPreferenceRowProps) {
-  const shell = useStore((s) => s.shell);
-  const writable = useStore((s) => s.writable);
-  const status = useStore((s) => s.status);
-  const [open, setOpen] = useState(false);
-  const items = SHELLS.map((id) => ({ id, label: t("shell." + id) }));
+/** 默认终端选择行:配置读写全部走宿主 config bridge(六线统一)。 */
+function ShellPreferenceRow() {
+  const [shell, setShell] = useState("powershell");
+  const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  useEffect(() => {
+    let alive = true;
+    bridgeConfig().then((v) => {
+      if (!alive) return;
+      if (v && v.defaultShell) {
+        setShell(v.defaultShell);
+        setStatus("ready");
+      } else {
+        setStatus("unavailable");
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const change = (value: string): void => {
+    setShell(value);
+    void bridgeWrite(value);
+  };
   if (status === "unavailable") {
     return (
       <div className="btRow">
         <div className="btRowText">
-          <div className="btTitle">{t("shell.title")}</div>
-          <div className="btDesc">{t("shell.unavailable")}</div>
+          <div className="btTitle">{zh["shell.title"]}</div>
+          <div className="btDesc">{zh["shell.unavailable"]}</div>
         </div>
       </div>
     );
@@ -136,114 +158,98 @@ function ShellPreferenceRow({ t, useStore, setShell }: ShellPreferenceRowProps) 
   return (
     <div className="btRow">
       <div className="btRowText">
-        <div className="btTitle">{t("shell.title")}</div>
-        <div className="btDesc">{t("shell.description")}</div>
+        <div className="btTitle">{zh["shell.title"]}</div>
+        <div className="btDesc">{zh["shell.description"]}</div>
       </div>
-      <Menu
-        open={open}
-        onClose={() => setOpen(false)}
-        items={items}
-        selectedId={shell}
-        onSelect={(id) => {
-          setOpen(false);
-          setShell(id);
-        }}
-        align="end"
-        portal
-        anchor={
-          <button
-            type="button"
-            className="btSelector"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            disabled={!writable}
-            onClick={() => setOpen(!open)}
-            style={!writable ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
-          >
-            {t("shell." + shell)}
-            <IconChevronDownOutlineMedium className="btChevron" />
-          </button>
-        }
-      />
+      <select
+        className="btSelector"
+        value={shell}
+        onChange={(e) => change((e.target as HTMLSelectElement).value)}
+      >
+        {SHELLS.map((id) => (
+          <option key={id} value={id}>
+            {zh["shell." + id] ?? id}
+          </option>
+        ))}
+      </select>
     </div>
   );
-}
-
-interface SettingsSnapshot {
-  status: "loading" | "ready" | "unavailable";
-  value?: { defaultShell?: string };
-  revision: number | undefined;
-  writable: boolean;
-}
-
-interface ConfigFormBinding {
-  getSnapshot(): SettingsSnapshot;
-  subscribe(fn: () => void): () => void;
-  set(field: string, value: string): Promise<boolean>;
-  unset(field: string): Promise<boolean>;
 }
 
 interface ClientContext {
   effect(fn: () => unknown, name?: string): unknown;
   locale: { register(ns: string, dicts: Record<string, Record<string, string>>): unknown };
-  configForms: { get(entryId: string): ConfigFormBinding };
   slots: {
     inject(slot: string, fn: () => unknown, name?: string): void;
     register(options: Record<string, unknown>, Component: unknown): Record<string, unknown>;
   };
 }
 
-interface RowStoreActions {
-  sync(shell?: string, revision?: number, writable?: boolean, status?: RowState["status"]): void;
+/** 无设置页宿主(0.1.0/0.1.1)兜底:浮窗齿轮 + 固定定位面板承载设置行。 */
+function SettingsOverlayEntry() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "fixed", right: "16px", bottom: "110px", zIndex: 10000 }}>
+      {open ? <div className="btOverlay" onClick={() => setOpen(false)} /> : null}
+      {open ? (
+        <div className="btPanel">
+          <button
+            type="button"
+            className="btSelector"
+            style={{ float: "right", height: "30px", fontSize: "12px", marginBottom: "8px" }}
+            onClick={() => setOpen(false)}
+          >
+            ✕
+          </button>
+          <ShellPreferenceRow />
+        </div>
+      ) : null}
+      <button type="button" className="btGear" title={zhDictTitle()} onClick={() => setOpen(!open)}>
+        ⚙
+      </button>
+    </div>
+  );
 }
 
-/** 账本 label：从 zh/en 字典取「默认终端」标题（无宿主 locale 依赖）。 */
-const zhDictTitle = (): string => (zh as Record<string, string>)["shell.title"] ?? "终端";
-
 export function apply(ctx: ClientContext): void {
-  // Single call for every locale: the registry rejects a duplicate
-  // (namespace, locale) pair, so one bundle keeps the namespace atomic
-  // (fr/de/it/ru/es ride the untyped dicts overload; only zh/en are built in).
-  ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en, fr, de, it, ru, es }), "bash-terminal: settings dictionaries");
-  const scope = ctx.configForms.get(ENTRY_ID);
-  const store = defineStore<RowState, { sync: (draft: RowState, shell?: string, revision?: number, writable?: boolean, status?: RowState["status"]) => void }>({
-    init: (): RowState => ({ shell: "powershell", revision: -1, writable: false, status: "loading" }),
-    actions: {
-      sync: (d, shell, revision, writable, status) => {
-        if (revision !== undefined && revision <= d.revision) return;
-        if (shell !== undefined) d.shell = shell;
-        if (revision !== undefined) d.revision = revision;
-        if (writable !== undefined) d.writable = writable;
-        if (status !== undefined) d.status = status;
-      }
+  const safe = (tag: string, fn: () => void): void => {
+    try {
+      fn();
+    } catch (e) {
+      console.warn(`[dsh-bash-terminal-ts] client surface '${tag}' failed:`, e);
     }
-  });
-  let bound: RowStoreActions | undefined;
-  const push = (snap: SettingsSnapshot): void => {
-    bound?.sync(snap.value?.defaultShell, snap.revision, snap.writable, snap.status);
   };
-  // 插件族共用设置 tab（dsh-thinking-levels 顶级「起子插件设置」节声明该子席位）。
-  // thinking-levels 缺席时本 inject 静默等待，不阻塞客户端半。
-  ctx.slots.inject(
-    "dsh-family.tab",
-    () =>
-      ctx.slots.register(
-        {
-          name: "dsh-family.tab",
-          id: "bash-terminal-shell",
-          order: 60,
-          label: () => zhDictTitle(),
-          store,
-          locale: SETTINGS_NS,
-          inject: (actions: unknown) => {
-            bound = actions as RowStoreActions;
-            push(scope.getSnapshot());
-            return { setShell: (value: string) => void scope.set("defaultShell", value) };
-          }
-        },
-        ShellPreferenceRow
-      ),
-    "bash-terminal: settings row"
-  );
-  ctx.effect(() => scope.subscribe(() => push(scope.getSnapshot())), "bash-terminal: settings watch");
+  safe("locale", () => {
+    ctx.effect(
+      () => ctx.locale.register(SETTINGS_NS, { zh, en, fr, de, it, ru, es }),
+      "bash-terminal: settings dictionaries",
+    );
+  });
+  safe("dsh-family.tab", () => {
+    ctx.slots.inject(
+      "dsh-family.tab",
+      () =>
+        ctx.slots.register(
+          {
+            name: "dsh-family.tab",
+            id: "bash-terminal-shell",
+            order: 60,
+            label: zhDictTitle,
+            locale: SETTINGS_NS,
+            inject: () => ({}),
+          },
+          () => <ShellPreferenceRow />,
+        ),
+      "bash-terminal: settings row",
+    );
+  });
+  safe("shell.overlay", () => {
+    ctx.slots.inject(
+      "shell.overlay",
+      () =>
+        ctx.slots.register({ name: "shell.overlay", id: "bash-terminal-settings" }, () => (
+          <SettingsOverlayEntry />
+        )),
+    );
+  });
 }

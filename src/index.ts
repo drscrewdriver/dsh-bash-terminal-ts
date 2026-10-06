@@ -54,6 +54,8 @@ import { createTerminalRegistry, terminalTool } from "./terminal.js";
 
 /** Stable Cordis plugin name. */
 export const name = "bash-terminal";
+/** Composition entry id (the `tool-bash-terminal` row the bundle patch declares). */
+const ENTRY_ID = "tool-bash-terminal";
 /** Services required before the tool can register. */
 export const inject = ["tools", "systemPrompt", "shellEnv", "subprocess", "settings", "sandbox", "sandboxPolicy"];
 
@@ -677,7 +679,13 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // 0.1.7: `defaultShell` is a `.volatile()` config field — the loader hands
   // `apply` a live ref and the latest value is resolved on every read; there
   // is no settings registration call anymore (removed with the 0.1.7 host).
+  // compat-legacy: ≤0.1.6 的宿主没有配置热重载,bridge 写入走这个覆盖值
+  // (rc.1+ 上 volatile 与覆盖值同源同写,二者一致)。
+  let shellOverride: string | undefined;
   const currentShell = (): string => {
+    if (typeof shellOverride === "string" && (SHELLS as readonly string[]).includes(shellOverride)) {
+      return shellOverride;
+    }
     const v = config.defaultShell as string | VolatileRef<string> | undefined;
     if (typeof v === "string") return v;
     const got = typeof v?.get === "function" ? v.get() : undefined;
@@ -713,6 +721,103 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     name: "tool:bash-terminal",
     order: 105,
     text: "Use the shell tool for terminal commands: it runs in the terminal the user chose in Settings -> General -> Default terminal (PowerShell, Git Bash, MSYS2, or WSL) and honors the DSH sandbox. Prefer it over the pwsh tool for everyday commands; keep the pwsh tool for cases that specifically need the sandboxed PowerShell surface."
+  });
+
+  // compat-legacy: 六线统一配置通道(≤0.1.6 无 client-store 模块表,client 走本
+  // bridge 读写 defaultShell)。写路径 = settings.mutate;≤0.1.6 的 loader 不会自动
+  // 注册命名空间,复用 perm-gate 自门控(not registered → register → 重试);
+  // rc.1+ 命名空间由 loader 占用,该分支自然不命中。GET 带回当前值与可选集。
+  // 宿主 context 类型未收录 inject/局部服务形状,compat 桥按宽化面调用。
+  const compatCtx = ctx as unknown as { inject: (deps: string[], fn: (svcCtx: any) => void) => void };
+  compatCtx.inject(["webServer", "settings"], (svcCtx: any) => {
+    const svc = svcCtx.settings;
+    const writeShell = async (value: string): Promise<void> => {
+      if (typeof svc.mutate !== "function") {
+        // 显式降级:该线 settings 服务无 mutate(理论仅最老线),覆盖值仅本进程
+        // 生效;持久化请改 cordis.patch.yml 的 defaultShell。
+        throw new Error(
+          "settings service exposes no mutate on this host line - defaultShell applies for this process only; persist via cordis.patch.yml"
+        );
+      }
+      shellOverride = value;
+      try {
+        await svc.mutate(ENTRY_ID, [{ op: "set", path: ["defaultShell"], value }]);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (!/not registered/i.test(message) || typeof (svc as Record<string, unknown>).register !== "function") {
+          throw e;
+        }
+        console.warn(`[dsh-bash-terminal-ts] legacy line: registering settings namespace ${ENTRY_ID}`);
+        (svc as { register: (ns: string, schema: unknown, opts?: unknown) => unknown }).register(
+          ENTRY_ID,
+          Config,
+          { base: { defaultShell: value } }
+        );
+        await svc.mutate(ENTRY_ID, [{ op: "set", path: ["defaultShell"], value }]);
+        console.warn("[dsh-bash-terminal-ts] legacy settings namespace registered");
+      }
+    };
+    svcCtx.effect(
+      () => {
+        const json = (res: unknown, status: number, body: unknown): void => {
+          (res as { writeHead: (s: number, h: Record<string, string>) => void; end: (b: string) => void }).writeHead(status, { "content-type": "application/json; charset=utf-8" });
+          (res as { end: (b: string) => void }).end(JSON.stringify(body));
+        };
+        const handler = (req: any, res: any): void => {
+          const addr = req.socket?.remoteAddress ?? "";
+          if (addr !== "127.0.0.1" && addr !== "::1" && addr !== "::ffff:127.0.0.1") {
+            json(res, 403, { ok: false, code: "loopback-only" });
+            return;
+          }
+          if (req.method === "GET") {
+            // 缝内省:compat 验证用——当前线 ctx.subprocess 的真实能力面
+            const seam = ctx as unknown as { subprocess?: Record<string, unknown> };
+            const sp = seam.subprocess as { spawn?: unknown; spawnTerminal?: unknown } | undefined;
+            json(res, 200, {
+              ok: true,
+              value: {
+                defaultShell: currentShell(),
+                shells: SHELLS,
+                seam: { spawn: typeof sp?.spawn, spawnTerminal: typeof sp?.spawnTerminal },
+              },
+            });
+            return;
+          }
+          if (req.method !== "POST") {
+            json(res, 405, { ok: false, code: "method-not-allowed" });
+            return;
+          }
+          const chunks: Buffer[] = [];
+          let size = 0;
+          req.on("data", (c: Buffer) => {
+            size += c.length;
+            if (size <= 65536) chunks.push(c);
+          });
+          req.on("end", () => {
+            let body: { defaultShell?: unknown } = {};
+            try {
+              body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+            } catch {
+              json(res, 400, { ok: false, code: "bad-json" });
+              return;
+            }
+            const value = typeof body.defaultShell === "string" ? body.defaultShell : "";
+            if (!(SHELLS as readonly string[]).includes(value)) {
+              json(res, 400, { ok: false, code: "invalid-shell" });
+              return;
+            }
+            void writeShell(value)
+              .then(() => json(res, 200, { ok: true, value: { defaultShell: value } }))
+              .catch((e: unknown) => json(res, 500, { ok: false, code: "write-failed", message: e instanceof Error ? e.message : String(e) }));
+          });
+        };
+        const registered = [
+          svcCtx.webServer.register({ kind: "exact", path: "/api/bash-terminal/config", handler }),
+        ];
+        return () => {
+          for (const dispose of registered) dispose();
+        };
+      }, "bash-terminal: compat config bridge");
   });
 
   const toolName = "shell";
