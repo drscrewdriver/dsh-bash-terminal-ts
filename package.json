@@ -55,6 +55,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs && tsc -p tsconfig.test.json",
+    "prepack": "npm run build",
     "build:client": "node scripts/build-client.mjs",
     "test": "node test-dist/unit.js && node test-dist/apply.js && node test-dist/client.js && node test-dist/terminal.js",
     "lint": "eslint ."
