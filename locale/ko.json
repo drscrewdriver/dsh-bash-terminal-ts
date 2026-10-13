@@ -1,0 +1,4 @@
+{
+  "title": "하단 터미널",
+  "description": "shell 도구와 하단 독의 내장 터미널(PowerShell / Git Bash / MSYS2 / WSL). shell별 활성화 스위치와 기본 shell 대체 체인을 제공합니다."
+}

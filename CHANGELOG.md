@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 (2026-10-13)
+
+- **浏览器内嵌多 shell 终端**（新能力，`src/webterminals/*`）：底部工作台新增「终端（多 shell）」tab，真 PTY 走 `node-pty` + WS，四种 shell（PowerShell / Git Bash / MSYS2 / WSL bash）可并存。xterm **打进 bundle**而非外部 `require` —— 宿主 client 模块表里没有 `@xterm/xterm`，外部引用会直接 `missed the module table`；`scripts/check-artifacts.mjs` 拿 xterm 自己的 DOM 标记作证人断言已内联，并卡住 bundle 体积上限防第二个重型依赖偷进。
+- **两级开关与回落链**：总开关 `bottomTerminal` 之下每个 shell 各有激活开关（`shellPowerShell` / `shellGitBash` / `shellMsys2` / `shellWsl`），未激活的 shell 按名拒绝并回 `shellNotActivated`；全关时不堵死，回落到兜底 shell 并上报 `fellBack` / `floor`。开关写入进程内即时生效（无热重载的宿主线走进程内 overrides 图）。
+- **设置面两个落点 + 三代宿主自适应**（`src/settings-surface.ts`）：同时挂 `plugins.bundle.config`（0.1.7+/0.2.0）与 `settings.plugin.item`（0.1.2–0.1.6），并向家族节 `dsh-family` 贡献子席位；家族节不存在时自注册一个顶级节（**自己的 id**，不遮蔽 `dsh-family`）。能力面靠 **settings 服务实例的方法形状**分类，不靠 `import` 宿主包（宿主包在 app 树里，插件目录解析不到）也不靠版本号猜。齿轮浮窗退化为设置入口：仅在无设置页的 0.1.0/0.1.1 线上渲染。
+- **不再抢注 `webTerminals`**：上一版在 client 里 provide 该服务，与宿主 `dsh-api-terminal-controller` 同名相撞，cordis 拒载第二次 provide → 整页 `Failed to load plugins`。现在只有一个 provide 点，且先活读服务是否空闲；`shimOfficialTerminal` 默认 **off**（opt-in）。同时删掉 `ctx.betterSidebar` 属性读——client ctx 是 Proxy，未声明就读直接抛错。
+- **官方右栏终端的 shell 菜单（覆写宿主行）**：`cordis.patch.yml` 新增对 `terminal-controller` 行的覆盖，在原生候选前追加 `msys-bash.exe` / `git-bash.exe` 两个**自带文件名**的硬链接候选。宿主 `discoverShells` 按可执行文件名去重且保留最早一条，Git Bash 与 MSYS2 都叫 `bash.exe`，不改名就永远只能出一个。**原生六个候选一个不动**：把 `Git\bin\bash.exe` 排在裸名 `bash` 之前会静默删掉 WSL（实发过，已回退并写进门禁）。被覆写的行没有默认值可退，11 个限额必须全量重述。
+- **shell 下拉改为自绘**：原生 `<select>` 的选项弹层由操作系统绘制、不吃页面配色，暗色主题下是白底白字。新增 `ShellPicker`，浮层用宿主 `--dsw-alias-bg-overlay`（亮/暗各自定义），随主题免费切换。门禁反向：三处源文件不得再出现 `<select>` / `<option>`。
+- **别名工具与文档**：`scripts/link-shells.mjs`（幂等建硬链接，权限不够时打印确切命令）、`npm run link:shells`、`install.ps1` 末尾的可选提示、README 中/英「shell 别名」章节（含手工 `mklink` 命令、一步提权写法、可粘贴给全权限 agent 的提示词、以及 MSYS2 需要的 `~/.bashrc` PATH 守卫）。门禁加文档漂移断言：补丁里每个绝对路径候选必须同时出现在 README 和建链脚本里。
+- **本地化**：运行时词表 `src/locales.ts` 九语（zh 键集为真理源，其余八语 `Record<keyof typeof zh, string>` 编译期对齐）+ 元数据 `locale/<lang>.json` 九份（`en.json` 为宿主扫描必需锚）；`check-artifacts.mjs` 扫死文案（key 定义无人引用 = 漏渲染）并改为**遍历 browser 目录**而非硬编码文件清单。
+- **验证**：七套离线测试全绿（unit / apply / client / terminal / shells / webterminals / browser）+ 四层产物闸（typecheck→test→build→dist 冒烟）+ 真宿主实证：0.2.0-rc.2 沙箱格上自有通道 24 项全 PASS、官方 shell 列表探针确认 WSL 保留且两个别名已入列、`git-bash.exe -i` 与原件逐字段一致（`MSYSTEM=MINGW64`、POSIX 根 `C:\Program Files\Git\`）、浏览器实测暗色弹层配色 = 令牌解析值且全页 `select` 数为 0。**未验证面**：0.1.0/0.1.1/0.1.2/0.1.5/0.1.6/0.1.7 六线的设置面四臂本轮只走离线测试，故 dist-tag 只移 `dsh-0.2.0` 与 `compat`，`latest` 仍留 `0.7.2-compat.2`。
+
 ## 0.7.1 (2026-10-01)
 
 - **`node-pty` 钉版对齐宿主**：`^1.1.0` → `1.2.0-beta.15`（精确钉）。DSH 宿主 `@deepseek-ai/dsh-subprocess-local` 的 0.1.7 与 0.2.0 两线均钉此版；1.1.0 稳定线无预编译产物、安装必跑 node-gyp 本地编译，beta 线 tarball 自带全平台预编译产物（win32 的 `conpty.node` / `conpty.dll` / `OpenConsole.exe` 均随包分发），安装脚本被拦截时运行时加载器兜底查 `prebuilds/<platform>-<arch>/`，不编译也能加载。

@@ -70,6 +70,66 @@ pnpm rebuild node-pty
 
 For local development (junction install, source changes apply instantly) see the Chinese README's development section.
 
+## Shell aliases: get Git Bash / MSYS2 into the host's own terminal menu (optional)
+
+This plugin's own “Terminal (multi-shell)” tab needs nothing extra — all four shells work out of the box. The **host's** official right-sidebar terminal is a different story: its menu is built by `discoverShells`, which keys a Map by the executable **file name** and keeps the earliest entry, and both Git Bash and MSYS2 ship as `bash.exe`. At most one of them can ever appear there.
+
+The bundled `cordis.patch.yml` therefore adds two candidates that carry a file name of their own: `C:\msys64\usr\bin\msys-bash.exe` and `C:\Program Files\Git\bin\git-bash.exe`. Both are hard links (same inode, no extra space, delete them to revert), and they only produce a menu entry if they actually exist on the machine. A missing link is skipped per candidate, so the menu stays exactly as it was and nothing fails.
+
+Create the aliases (either route):
+
+```powershell
+# A. the script shipped with this package: creates what it can, prints the elevated
+#    command verbatim for what it cannot
+node scripts/link-shells.mjs
+
+# B. by hand (the MSYS2 line works as a standard user; the Git line needs an ELEVATED PowerShell / cmd)
+cmd /c mklink /H "C:\msys64\usr\bin\msys-bash.exe"       "C:\msys64\usr\bin\bash.exe"
+cmd /c mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe"
+```
+
+With no administrator terminal at hand, pull one up from an ordinary session (Windows asks once; click **Yes**):
+
+```powershell
+Start-Process cmd -Verb RunAs -Wait -ArgumentList '/c','mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe" > "%TEMP%\mklink.log" 2>&1'
+Get-Content "$env:TEMP\mklink.log"
+```
+
+The alias behaves exactly like the original (measured on `git-bash.exe -i`: `MSYSTEM=MINGW64`, POSIX root `C:\Program Files\Git\`, `$0=/usr/bin/bash`, `git` on PATH) - because the link stays inside `Git\bin\`, so bash still derives the same root from its own path.
+
+The Git line cannot avoid elevation, for two independent reasons: `CreateHardLink` requires write access to the **source** file, which Program Files denies a standard user (so the link cannot be created from somewhere else either); and the link has to stay inside `Git\bin\`, because bash derives its POSIX root from its own path and loses `/usr/bin` and `/etc` anywhere else.
+
+> **Hand it to an agent** — paste this to an agent running with full (administrator) permissions:
+>
+> ```text
+> Create two shell alias hard links for the DSH host's official terminal, with administrator rights:
+>   cmd /c mklink /H "C:\msys64\usr\bin\msys-bash.exe" "C:\msys64\usr\bin\bash.exe"
+>   cmd /c mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe"
+> Skip creation if the target already exists; never overwrite it. Then verify with this package's
+> `node scripts/link-shells.mjs` - both lines must report `ok ... (same inode, nlink=2)`. Finally
+> restart DSH so the official terminal re-discovers its shells.
+> Constraints: do not copy the files, do not create symbolic links, do not put the links in any
+> other directory, do not modify bash.exe itself. If you are not already in an administrator
+> context, start one with `Start-Process cmd -Verb RunAs` (Windows prompts once) and redirect the
+> output to a file you can read back. If elevation fails, report the exact command and error code
+> back to me instead of falling back to a copy.
+> ```
+
+After restarting DSH, the official “New” dropdown should list `msys-bash.exe` and `git-bash.exe`, while plain `bash` (on Windows that resolves to the WSL forwarder `C:\Windows\System32\bash.exe`) **must still be there** — this package never claims the `bash` key for Git and pushes WSL out of the menu.
+
+> ⚠️ **MSYS2 needs one more step: a PATH guard in `~/.bashrc`** (`C:\msys64\home\<you>\.bashrc`). The host starts every candidate as an interactive **non-login** shell (`shellCandidates` is a plain string array, so `-l` cannot be passed), and a non-login shell never sources `/etc/profile` — which is exactly where MSYS2 adds `/usr/bin` to PATH. Without this, `msys-bash.exe` opens fine but `uname`/`ls` report “command not found”. Git Bash does **not** need it: it injects `/usr/bin` and `/mingw64/bin` itself (verified: `cygpath` and `git` work immediately).
+>
+> ```bash
+> # >>> dsh-bash-terminal-ts PATH guard >>>
+> case ":$PATH:" in
+>   *":/usr/bin:"*) ;;
+>   *) PATH="/usr/bin:$PATH" ;;
+> esac
+> # <<< dsh-bash-terminal-ts PATH guard <<<
+> ```
+>
+> Prepending is safe here because `/usr/bin/gcc.exe` does not exist, so the mingw64 toolchain still resolves first (verified: `command -v gcc` stays `/mingw64/bin/gcc`). **Re-measure after any `pacman -S mingw-w64-*` install**, or the guard can start shadowing your compiler instead. To revert: delete everything between the two sentinel comments.
+
 ## Sandbox
 
 - `danger-full-access` sessions run directly (no wrapping).
@@ -91,9 +151,47 @@ For local development (junction install, source changes apply instantly) see the
 - **node-pty accepts no named signals on Windows**: `signal` maps `SIGINT` to Ctrl+C (`\x03`); other signals (`SIGTERM` / `SIGKILL` / `SIGTSTP` / `SIGHUP`) degrade to terminating the session.
 - Git Bash interactive sessions work fully.
 
+## Bottom terminal (embedded browser shell, 0.8.0+)
+
+A terminal for a **human**, sharing the same shell knowledge as the model-facing `shell`/`terminal` tools but a different environment.
+
+**Entry point**: the bottom workbench of [dsh-better-sidebar](https://www.npmjs.com/package/dsh-better-sidebar) 0.25+. This plugin registers **its own tab there, "Terminal (multi-shell)"**, which reaches all four shells:
+
+| Host | What happens |
+|---|---|
+| Terminal controller present (DSH 0.2.0-rc.2+, official CLI/GUI builds) | The official "Terminal" row is powered by the host and keeps working; this plugin **does not touch** `webTerminals` and only adds its multi-shell tab |
+| No controller mounted (some Desktop builds, where the official row is dead) | The multi-shell tab works regardless. Turn on "Take over the official terminal row" only if you specifically need that official row lit up |
+
+Why a tab of our own: the official shell menu **de-duplicates by executable file name** and keeps the earliest entry, so a bare `bash` on Windows resolves to `C:\Windows\System32\bash.exe` - the WSL forwarder - and Git Bash (also `bash.exe`) can never join it. Our tab picks by catalog ROW, so all four coexist. The official row is still there; this package adds exactly one entry to it (see below).
+
+> **The take-over switch is off by default, and that is a correctness rule, not caution.** The host's controller client registers the same `webTerminals` name, cordis **refuses a second provider of one name**, and the loser is the one that throws - the controller's provide is unguarded, so if we get there first we take down the first-party terminal and the page becomes `Failed to load plugins / web boot: 1 entry did not activate` (measured on 0.2.0-rc.2). When you do switch it on, the plugin **reads the service live first** and only publishes if the name is free, then states the outcome in the settings row ("taken over" / "the host already publishes it"). So enabling it on a host that has a controller cannot break anything.
+
+The tab registers only when `betterSidebar` is available, through `ctx.inject(['betterSidebar'])` so arrival order does not matter (with a soft read as fallback) - and it must never read `ctx.betterSidebar` as a property: the client context is a Proxy and an undeclared service name throws `cannot get property "betterSidebar" without inject`. xterm is **bundled into this plugin's own artifact** - DSH's client module table resolves only platform seed words, shell-owned modules, registered package factories and boot modules, so an external `require("@xterm/xterm")` fails at mount with "missed the module table". The settings section states which path you are on ("The host terminal is in charge").
+
+The settings have **two landing points**, and both render the SAME component (a change cannot land on one and miss the other):
+
+| Surface | Slot | Host lines |
+|---|---|---|
+| Plugin detail page (bundle settings) | `plugins.bundle.config`, keyed by the package name | 0.1.7-rc.1+ / 0.2.0 |
+| A tab under the family section | `dsh-family.tab` (container: dsh-thinking-levels) | as above, and TL must be installed |
+
+Both arms are registered and whichever has a renderer wins. **When there is no family container to carry the card, this plugin registers its own top-level `settings.section`** (id `bash-terminal`; it never shadows `dsh-family`, because two entries under one id produce two navigation rows). That decision is taken when the host *declares* the section - opening the settings panel - not at apply time, because the container belongs to another plugin's client and deciding early means betting on bundle order.
+
+Two further arms exist for cross-version reach: `settings.plugin.item` (keyed by the settings namespace) is the 0.1.2/0.1.5 equivalent of the bundle detail card, and the `shell.overlay` panel renders **only when the host itself reports that it has no settings page** (the component returns null otherwise). That classification reads neither a version string nor an imported host package - host packages live in the application's tree and a plugin cannot resolve them - but the capability face of the settings service: `installSection` present → 0.1.2/0.1.5 (page exists); only `register` → 0.1.0/0.1.1 (the `settings.*` slot map is declared but **no page renders it**, so a registered card would be unreachable and the plugin must bring its own entry); neither → 0.1.7+/0.2.0 (page exists).
+
+- Activation switches: Git Bash / MSYS2 / WSL. A switch means *allowed*; usable = allowed ∧ detected, so “detected means on” needs no extra configuration. **PowerShell is the floor and cannot be turned off.**
+- `defaultShell` only offers rows that are activated ∧ available, validated server-side; a stale value falls back through `[powershell, gitbash, msys2, wsl]` with a visible notice and is never rewritten, and an empty candidate set falls back to pwsh → powershell.exe → cmd.exe.
+- The browser terminal starts PowerShell **without `-NoProfile`** (your aliases and prompt survive) and with a real terminal type, unlike the tool path, which pins `TERM=dumb`/`NO_COLOR=1` because a parseable one-shot output is correct there.
+- It does **not** add anything for the model: no tool, no system-prompt section, no sandbox approval. Routes are loopback-only (a DNS-rebinding/LAN guard, not authentication).
+- MSYS2 is offered as `usr\bin\bash.exe` with `MSYSTEM=MINGW64`; `msys2.exe`/`git-bash.exe` are refused because they open their own window and return zero bytes on a pipe.
+- What the official menu does change: this package's `cordis.patch.yml` overrides the host `terminal-controller` row's `shellCandidates`, **prepending one entry only** - `C:\msys64\usr\bin\msys-bash.exe`, a hard link that gives MSYS2 a distinct file name so de-duplication stops erasing it. The stock candidates are left untouched. Pinning `Git\bin\bash.exe` ahead of them (an earlier revision did) would claim the `bash` key from the **WSL forwarder** and delete WSL from the menu; and Git cannot be renamed without a link inside `C:\Program Files\Git\bin\`, which needs elevation and must stay inside the Git tree because bash derives its POSIX root from its own path. So Git Bash comes from this plugin's tab instead.
+- Two things that override costs: the patch replaces that row's config **whole**, so all eleven keys are spelled out and `test/webterminals.ts` asserts both the full key set and that every stock candidate survives; and MSYS2's `/usr/bin` is missing in a non-login shell (the host passes `-i`, guessed from the file name, with no env channel), which is why `C:\msys64\home\<user>\.bashrc` needs an idempotent `PATH="/usr/bin:$PATH"` guard. Measured on the live host: `cmd.exe | msys-bash.exe | bash(=System32, WSL) | powershell`.
+
+Details, the argv/env table and the measured smoke output are in `README.md` (Chinese), which is the maintained copy.
+
 ## Config
 
-Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `gitBashPath`, `msys2Path`, `wslPath`.
+Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `gitBashPath`, `msys2Path`, `wslPath`, plus the bottom-terminal fields `shellGitBash`, `shellMsys2`, `shellWsl`, `wslDistro`.
 
 ## Uninstall
 

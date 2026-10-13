@@ -1,0 +1,4 @@
+{
+  "title": "底部终端",
+  "description": "shell 工具与底部工作台终端（PowerShell / Git Bash / MSYS2 / WSL），带激活开关与默认 shell 回落链。"
+}

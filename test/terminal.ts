@@ -197,9 +197,14 @@ try {
 if (wslOpened !== undefined) {
   await delay(4500);
   let wslOut = await tool.execute({ action: "send", sessionId: wslOpened.sessionId, input: "pwd\r" }, exec) as Extract<TerminalToolResult, { kind: "session" }>;
-  if (!wslOut.output.includes("/mnt/")) {
-    await delay(1500);
-    wslOut = await tool.execute({ action: "read", sessionId: wslOpened.sessionId }, exec) as Extract<TerminalToolResult, { kind: "session" }>;
+  // Re-SEND on every retry, not just re-read: during a cold distro boot the first
+  // keystroke can land before bash is reading, and then no amount of polling the
+  // buffer will ever produce an answer. Polling without resending is exactly the
+  // flake this used to be (intermittent "responds with /mnt/ path" with nothing but
+  // escape sequences in the output).
+  for (let attempt = 0; attempt < 3 && !wslOut.output.includes("/mnt/"); attempt += 1) {
+    await delay(2000);
+    wslOut = await tool.execute({ action: "send", sessionId: wslOpened.sessionId, input: "pwd\r" }, exec) as Extract<TerminalToolResult, { kind: "session" }>;
   }
   // Tolerate every observed WSL failure mode (no distro, ConPTY RPC errors,
   // and the localhost-proxy "Wsl/Service/E_UNEXPECTED" crash) — environment

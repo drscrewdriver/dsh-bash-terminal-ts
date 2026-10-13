@@ -1,0 +1,4 @@
+{
+  "title": "Unteres Terminal",
+  "description": "Shell-Werkzeug plus eingebettetes Terminal im unteren Dock (PowerShell / Git Bash / MSYS2 / WSL), mit Aktivierung pro Shell und Rückfallkette."
+}

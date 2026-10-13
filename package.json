@@ -1,10 +1,10 @@
 {
   "name": "dsh-bash-terminal-ts",
-  "version": "0.7.2-compat.2",
+  "version": "0.8.0",
   "publishConfig": {
     "tag": "compat"
   },
-  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, with a user-chosen default terminal in the Web UI settings. TypeScript rewrite of MAXeaglet/dsh-bash-terminal with working MSYS2/MINGW64 support.",
+  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, plus an embedded terminal for the bottom dock (dsh-better-sidebar's terminal tab) with per-shell activation switches and a default-shell fallback chain.",
   "author": "drscrewdriver",
   "license": "MIT",
   "repository": {
@@ -20,6 +20,8 @@
     "dsh",
     "plugin",
     "terminal",
+    "terminal-ui",
+    "bottom-dock",
     "shell",
     "powershell",
     "git-bash",
@@ -36,6 +38,7 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
@@ -44,6 +47,7 @@
     "src",
     "scripts",
     "template",
+    "locale",
     "tsconfig.json",
     "tsconfig.client.json",
     "tsconfig.test.json",
@@ -54,11 +58,13 @@
     "screenshots.json"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs && tsc -p tsconfig.test.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs && tsc -p tsconfig.test.json && node scripts/build-browser-tests.mjs && node scripts/check-artifacts.mjs",
+    "check:artifacts": "node scripts/check-artifacts.mjs",
     "prepack": "npm run build",
     "build:client": "node scripts/build-client.mjs",
-    "test": "node test-dist/unit.js && node test-dist/apply.js && node test-dist/client.js && node test-dist/terminal.js",
-    "lint": "eslint ."
+    "test": "node test-dist/unit.js && node test-dist/apply.js && node test-dist/client.js && node test-dist/terminal.js && node test-dist/shells.js && node test-dist/webterminals.js && node test/browser.mjs",
+    "lint": "eslint .",
+    "link:shells": "node scripts/link-shells.mjs"
   },
   "dsh": {
     "bundle": {
@@ -86,7 +92,10 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.4",
-    "node-pty": "1.2.0-beta.15"
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "1.2.0-beta.15",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
@@ -109,6 +118,7 @@
     "@types/node": "^22.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/ws": "^8.5.13",
     "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",

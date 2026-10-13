@@ -13,6 +13,15 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 mkdirSync(join(root, "dist"), { recursive: true });
 mkdirSync(join(root, "lib"), { recursive: true });
 
+// xterm is BUNDLED, not external. Measured on a live desktop host: the client module
+// table resolves only platform seed words, shell-owned modules, registered package
+// factories and boot modules - a plugin asking for `@xterm/xterm` gets
+// "missed the module table" and the tab dies at mount. dsh-better-sidebar works around
+// the same limit with its own chunk loader (it fetches a plugin-owned script that
+// registers on a private global registry); copying that machinery for one dependency is
+// not worth it, so the emulator ships inside this bundle and the only thing resolved at
+// runtime is the platform's own react/jsx-runtime.
+
 await build({
   entryPoints: [join(root, "src", "client.tsx")],
   bundle: true,
@@ -20,6 +29,7 @@ await build({
   platform: "browser",
   outfile: join(root, "dist", "client.core.js"),
   external: ["react", "react/jsx-runtime", "react-dom", "@deepseek-ai/*"],
+  loader: { ".css": "text" },
   jsx: "automatic",
   // Pin the TS options instead of letting esbuild discover a tsconfig by walking
   // up from the entry point: an in-repo build found the repo-root tsconfig.json

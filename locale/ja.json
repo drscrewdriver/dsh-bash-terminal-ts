@@ -1,0 +1,4 @@
+{
+  "title": "下部ターミナル",
+  "description": "shell ツールと下部ドックの埋め込みターミナル（PowerShell / Git Bash / MSYS2 / WSL）。shell 単位の有効化スイッチと既定 shell の代替チェーン付き。"
+}

@@ -113,6 +113,63 @@ New-Item -ItemType Junction -Path "D:\workspace\projects\dsh-bash-terminal-ts\no
 node "$env:APPDATA\nvm\<node-version>\node_modules\@deepseek-ai\dsh\lib\bin.js" --profile web --dump-config | Select-String dsh-bash-terminal-ts
 ```
 
+## shell 别名：让宿主官方终端也列出 Git Bash / MSYS2（可选）
+
+本插件自带的「终端（多 shell）」tab 不依赖任何东西，四种 shell 开箱即用。但宿主**官方**右栏终端的 shell 菜单是按**可执行文件名**去重的（`discoverShells` 拿 basename 当 Map 键、保留最早一条），而 Git Bash 与 MSYS2 都叫 `bash.exe` —— 二者在官方菜单里最多只能出现一个。
+
+包内 `cordis.patch.yml` 因此给官方终端追加两个**带自己文件名**的候选：`C:\msys64\usr\bin\msys-bash.exe` 和 `C:\Program Files\Git\bin\git-bash.exe`。它们是硬链接（同一 inode，不占空间，删掉即恢复原状），**必须机器上真存在**才有条目；不存在时宿主按候选逐个跳过，菜单与改动前完全一致，不报错。
+
+建别名（任选一条路径）：
+
+```powershell
+# A. 包内脚本：能建的就建，建不了的原样打印出管理员命令
+node scripts/link-shells.mjs
+
+# B. 手工建（MSYS2 那条普通权限即可；Git 那条要在**管理员** PowerShell / cmd 里）
+cmd /c mklink /H "C:\msys64\usr\bin\msys-bash.exe"       "C:\msys64\usr\bin\bash.exe"
+cmd /c mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe"
+```
+
+手上没有现成的管理员终端时，从普通权限的会话里**拉一个起来**（会弹一次 UAC，点“是”）：
+
+```powershell
+Start-Process cmd -Verb RunAs -Wait -ArgumentList '/c','mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe" > "%TEMP%\mklink.log" 2>&1'
+Get-Content "$env:TEMP\mklink.log"
+```
+
+别名与原件行为完全一致（实测 `git-bash.exe -i`：`MSYSTEM=MINGW64`、POSIX 根 `C:\Program Files\Git\`、`$0=/usr/bin/bash`、git 可用）—— 因为链接就待在 `Git\bin\` 里，bash 按自身路径推根时拿到的仍是同一个根。
+
+Git 那条**绕不开提权**，两个独立原因：`CreateHardLink` 要求对**源文件**有写权限（Program Files 对标准用户拒绝，所以链接也挪不到别的目录去建）；而链接又必须留在 `Git\bin\` 里 —— bash 按自身路径推导它的 POSIX 根，换目录就找不到 `/usr/bin`、`/etc`。
+
+> **交给 agent 代劳** —— 把下面这段原话贴给一个以完全权限（管理员）运行的 agent：
+>
+> ```text
+> 请以管理员权限为 DSH 宿主官方终端创建两个 shell 别名硬链接：
+>   cmd /c mklink /H "C:\msys64\usr\bin\msys-bash.exe" "C:\msys64\usr\bin\bash.exe"
+>   cmd /c mklink /H "C:\Program Files\Git\bin\git-bash.exe" "C:\Program Files\Git\bin\bash.exe"
+> 目标文件已存在时跳过创建、不要覆盖。然后跑本包内的 node scripts/link-shells.mjs 校验，
+> 两条都应输出 ok ... (same inode, nlink=2)。最后重启 DSH 让官方终端重新发现 shell。
+> 约束：不要复制文件、不要建符号链接（symbolic link）、不要把链接放到其它目录、
+> 不要改动 bash.exe 本身。若提权失败，把确切的命令和错误码回报给我，不要改用拷贝兜底。
+> ```
+
+改完重启 DSH，官方终端「新建」下拉应出现 `msys-bash.exe` / `git-bash.exe`，同时 `bash`（Windows 上解析到 WSL 转发器 `C:\Windows\System32\bash.exe`）**必须仍然在列** —— 本包不会为了 Git 去占 `bash` 这个键而把 WSL 挤出菜单。
+
+> ⚠️ **MSYS2 还差一步：`~/.bashrc` 的 PATH 守卫**（`C:\msys64\home\<你>\.bashrc`）。
+> 宿主把每个候选都当**交互式非登录** shell 起（`shellCandidates` 是纯字符串数组，传不了 `-l`），而非登录 shell 不会 source `/etc/profile` —— MSYS2 的 `/usr/bin` 正是由它加进 PATH 的。不补这一步，`msys-bash.exe` 能开、但 `uname`/`ls` 一律「未找到命令」。
+> Git Bash **不需要**这个守卫（它自己就会把 `/usr/bin`、`/mingw64/bin` 注入 PATH，实测 `cygpath`、`git` 直接可用）。
+>
+> ```bash
+> # >>> dsh-bash-terminal-ts PATH guard >>>
+> case ":$PATH:" in
+>   *":/usr/bin:"*) ;;
+>   *) PATH="/usr/bin:$PATH" ;;
+> esac
+> # <<< dsh-bash-terminal-ts PATH guard <<<
+> ```
+>
+> 前置在这里是安全的：`/usr/bin/gcc.exe` 不存在，mingw64 工具链仍然先命中（实测 `command -v gcc` 仍为 `/mingw64/bin/gcc`）。但**跑过 `pacman -S mingw-w64-*` 之后要重测一次**，否则可能反过来抢掉编译器。回滚：删掉两段哨兵注释之间的内容。
+
 ## 使用
 
 **用户在 Web UI 设置默认终端**：打开设置（齿轮）→ 通用 →「默认终端」下拉，选择 PowerShell / Git Bash / MSYS2 / WSL 之一。改动即时生效并持久化。
@@ -210,7 +267,142 @@ powershell -ExecutionPolicy Bypass -File install.ps1 uninstall
 - WSL 后台进程在超时/中断后可能在发行版内短暂残留（WSL 实例在最后一个进程退出后自动关闭）。
 - Git Bash 是 msys2 环境，与 WSL 的 Linux 行为存在差异（路径映射、包可用性）。
 - MSYS2 后端需要本机安装 MSYS2（默认 `C:\msys64`）；未安装时 `shell` 报 `backend unavailable`，可用 `msys2Path` 指定自定义位置。候选顺序永远是 `bash.exe` 优先、`msys2.exe` 兜底——`msys2.exe` 在管道 stdio 下会静默返回零字节，仅作最后手段。
-- 本插件仅在 `win32` 平台注册工具。
+- 本插件的 `shell` / `terminal` 工具仅在 `win32` 平台注册；**底部终端不限制平台**（它在 win32 用 node-pty，在其他平台用宿主 `ctx.subprocess.spawnTerminal`）。
+
+## 底部终端（浏览器内嵌 shell，0.8.0+）
+
+一个面向**人**的终端，跟面向模型的 `shell`/`terminal` 工具共用同一套 shell 知识，但环境完全不同。
+
+**入口**：[dsh-better-sidebar](https://www.npmjs.com/package/dsh-better-sidebar) 0.25+ 的底部工作台。本插件在那里注册**自己的 tab「终端（多 shell）」**，四个 shell 都能用：
+
+| 宿主 | 会发生什么 |
+|---|---|
+| 自带终端控制器（DSH 0.2.0-rc.2+，官方 CLI/GUI 构建） | 官方那行「终端」由宿主供电、照常可用；本插件**不碰** `webTerminals`，只额外提供自己的多 shell tab |
+| 没挂控制器（部分 Desktop 构建，官方那行是死的） | 多 shell tab 照常工作。若你**确实**需要点亮官方那行，再往下面打开「接管官方终端行」开关 |
+
+为什么要自己的 tab：官方终端菜单按**可执行文件名去重**（`shellKind` = 文件名去 `.exe` 转小写），而 Git Bash 与 MSYS2 的主 shell 同名 `bash.exe`，在默认候选下只能出现一个（本包用一步硬链接绕过了它，见下文）。本插件的 tab 按 catalog **行**选 shell，所以四个能并存；官方那行仍在原地，互不遮蔽。
+
+> **「接管官方终端行」默认关闭，这不是保守而是必需**。`webTerminals` 这个名字宿主的控制器 client 半也会注册，而 cordis **拒绝同名二次 provide**、抛错的是后到的一方——控制器的 provide 没有保护，所以我们先到就会把**官方终端整个打挂**，页面变成 `Failed to load plugins / web boot: 1 entry did not activate`（实测于 0.2.0-rc.2）。开关打开时本插件会**先活读一次服务**，确认名字没人占才提供，并在设置行里明说结果（「已接管」/「宿主已提供，未接管」）。也就是说：这个开关只在没有控制器的部署上有意义，在有控制器的宿主上打开它也不会造成破坏。
+
+这个 tab 只在 `ctx.betterSidebar` 存在时注册，走 `ctx.inject(['betterSidebar'])` 到达即注册（软读兜底）——**不能属性读** `ctx.betterSidebar`：client ctx 是 Proxy，读未声明的服务名会直接抛 `cannot get property "betterSidebar" without inject`。xterm **打包进本插件自己的 bundle**（DSH 的 client 模块表只认平台 seed words / shell 自有模块 / 已登记包工厂 / boot 模块四类，第三方包不在其中，外部 `require("@xterm/xterm")` 会在挂载时报 missed the module table）。设置节会明说当前是哪条路径（「当前由宿主终端提供」）。
+
+设置面一共**两个落点**，两处渲染同一个组件（不会一边改了另一边没改）：
+
+| 落点 | 插槽 | 适用宿主线 |
+|---|---|---|
+| 插件详情页（bundle 设置） | `plugins.bundle.config`（按包名 `dsh-bash-terminal-ts` 派发） | 0.1.7-rc.1+ / 0.2.0 |
+| 家族节「起子插件设置」下的 tab | `dsh-family.tab`（容器 = dsh-thinking-levels） | 同上，且需安装 TL |
+
+两个注册臂都在，哪个有渲染宿主哪个就生效。**没有可寄生的家族节时，本插件自己注册一个顶级 `settings.section`**（id `bash-terminal`，永远不冒用 `dsh-family`——同 id 遮蔽位会出双导航行）。这个判定发生在**宿主声明 section 的那一刻**（设置面板打开），不是 apply 期——容器是另一个插件的 client，apply 期赌的就是 bundle 顺序。
+
+另外两个臂是为了跳版本：`settings.plugin.item`（key = 设置命名空间）是 0.1.2/0.1.5 上相当于 bundle 详情页的那个面；`shell.overlay` 浮窗**只在宿主自己报「没有设置页」时渲染**（组件其余时候 return null）。该判定不读版本号、也不依赖 import 宿主包（宿主包在 app 树里，插件目录根本解析不到），而是看 settings 服务实例的能力面：`installSection` 在 → 0.1.2/0.1.5（有页）；只有 `register` → 0.1.0/0.1.1（**槽位表在但没有页渲染它**，所以卡片注册了也打不开，只能自带入口）；两者都不在 → 0.1.7+/0.2.0（有页）。
+
+### 开关与默认 shell
+
+| 项 | 默认 | 语义 |
+|---|---|---|
+| Git Bash | 开 | 开关 = 允许；**实际可用 = 允许 ∧ 本机探到**，所以“探到即开”无需额外配置 |
+| MSYS2 | 开 | 同上；候选永远是 `usr\bin\bash.exe` 优先，`msys2.exe` 拒用（它开自己的窗口，管道零字节） |
+| WSL bash | 开 | 同上；`wslDistro` 为空用 WSL 默认发行版 |
+| PowerShell | 恒开 | **保底后端，不可关闭**（关掉保底就不叫保底） |
+
+`defaultShell` 下拉只列「已激活 ∧ 可用」项，服务端二次校验（越界回 `bad-request`）。分配时的回落链：
+
+```
+候选 = 已激活 ∧ 可用，顺序 [powershell, gitbash, msys2, wsl]
+stored == ""      → 取候选首项，不提示（“用户未选”不是“选错了”）
+stored ∈ 候选      → 用它
+stored 越界        → 取候选首项 + 可见提示（不回写存值）
+候选为空          → pwsh → powershell.exe → cmd.exe，提示“已兜底”
+```
+
+### UI 终端与模型工具的环境差异（为什么不能复用）
+
+| shell | 模型工具 argv | 底部终端 argv | 底部终端 env |
+|---|---|---|---|
+| powershell | `-NoLogo -NoProfile [-NonInteractive -Command <cmd>]` | **`-NoLogo`**（保留用户 profile） | `process.env` + `TERM=xterm-256color` |
+| gitbash | `-lc <cmd>` | `-i` | 同上，不注入 MSYSTEM（Git 自己会设 `MINGW64`） |
+| msys2 | `-lc <cmd>` | **`-l`**（绝不 `-lc`：无操作数会 exit 2） | 同上 + `MSYSTEM=MINGW64`（显式值赢） |
+| wsl | `[-d <d>] -e bash -lc <cmd>` | 有 distro `-d <d> -e bash -i`；无 `-- bash -i` | 同上 |
+
+工具路径额外钉 `TERM=dumb`/`NO_COLOR=1`/`PAGER=cat`，这对一次性命令正确，对用户看到的屏幕错误（无颜色、无光标控制、无 profile）。两者共用同一个 node-pty 分配器（`spawnPtyHandle(spec, style)`），只是 `style` 不同 —— 写两份就会让其中一份慢慢漂到错的终端类型上。
+
+另：ConPTY 下 bash 的 `$TERM` 实测为空（终端类型靠 node-pty 的 `name` 选项传递），所以 `TERM=xterm-256color` 主要作用于 POSIX 缝路径。
+
+### 官方终端菜单也被改了（以及为什么需要两步机器前置）
+
+本包的 `cordis.patch.yml` 覆盖宿主 `terminal-controller` 那一行的 `shellCandidates`，**只在原生列表前插一项**：
+
+```yaml
+- id: terminal-controller
+  config:
+    shellCandidates:
+      - 'C:\msys64\usr\bin\msys-bash.exe'   # 硬链接，kind 不同 → 新增一项
+      - zsh
+      - bash                                  # ← 保留：Windows 上它解析到 WSL 转发器
+      - fish
+      - pwsh
+      - powershell
+      - cmd
+    # …以及其余 10 个限制键，均照宿主默认值写全
+```
+
+**为什么不能把 `Git\bin\bash.exe` 也排到前面**（上一版就是这么写的，已回退）：`discoverShells` 按可执行文件名去重且**保留最早一条**，而 Windows 上裸名 `bash` 解析到的是 `C:\Windows\System32\bash.exe`——**WSL 转发器**。把 Git 排在它前面等于把 WSL 从官方菜单里**删掉**，这不是任何人的需求。Git Bash 拿不到自己的 key 是因为改名需要往 `C:\Program Files\Git\bin\`（需管理员权限）里建硬链接，而且该链接必须留在 Git 树内——Cygwin/Git-bash 按可执行文件所在路径推导它的 POSIX 根。所以 **Git Bash 由本插件自己的 tab 提供**，官方行只动了一处：把被去重抹掉的 MSYS2 加回来。
+
+实测（`POST /api/terminal/shells`，同一沙箱实例）：
+
+```
+cmd.exe=C:\Windows\system32\cmd.exe | msys-bash.exe=C:\msys64\usr\bin\msys-bash.exe
+bash=C:\Windows\system32\bash.EXE   | powershell=...\powershell.EXE
+→ WSL bash retained AND MSYS2 added
+```
+
+两个必须知道的风隙：
+
+1. **整块替换**。patch 对该行是**全量替换 config**，少写一个键就是静默删掉那个限制（`.default()` 只在输入缺字段时生效）。所以十一个键全部显式写出，并由 `test/webterminals.ts` 断言键集完整**且六个原生候选一个不少**——以后谁再把绝对路径的 `bash.exe` 插到裸名前面，构建会直接失败。
+2. **去重键是文件名**。所以 MSYS2 需要一个不同名的入口：
+
+```powershell
+# 前置一：给 MSYS2 一个不同名的硬链接（同 inode，不占空间，删文件即回滚）
+New-Item -ItemType HardLink -Path C:\msys64\usr\bin\msys-bash.exe -Target C:\msys64\usr\bin\bash.exe
+```
+
+```bash
+# 前置二：非登录 shell 不 source /etc/profile，/usr/bin 会缺（uname/ls 报“未找到命令”）
+# 宿主给候选的参数是按文件名猜死的 `-i`，插件无法改成 `-l`、也没有 env 通道，
+# 所以这一段必须落在 MSYS2 自己的 ~/.bashrc 里（幂等，删 sentinel 之间即回滚）
+case ":$PATH:" in
+  *":/usr/bin:"*) ;;
+  *) PATH="/usr/bin:$PATH" ;;
+esac
+```
+
+实测（真 node-pty，完全复现宿主的启动方式）：
+
+| 条目 | `uname` / `ls` | `gcc` |
+|---|---|---|
+| `bash.exe`（Git Bash） | ✅ | —（Git 本身不带编译器） |
+| `msys-bash.exe`（两项前置后） | ✅ | ✅ `/mingw64/bin` |
+| `msys-bash.exe`（缺前置二） | ❌ MISSING | ✅ |
+
+前置二用**前置** `/usr/bin` 在本机是安全的：`/usr/bin/gcc.exe` 不存在，所以 mingw64 工具链仍然优先；但如果你日后 `pacman -S mingw-w64-x86_64-gcc` 装了 MSYS 层级的 gcc，需要重新测一遍优先级。
+
+### 边界
+
+- 两条 HTTP 路由（legacy `/api/bash-terminal/config` 与新的 `/api/bash-terminal/terminals`）+ 一条 WS（`/bash-terminal/ws`），均**仅限回环地址**（防 DNS rebinding / 局域网，不是认证）。
+- **不给模型新增任何能力**：不注册工具、不写 systemPrompt 段落、不碰沙箱审批。
+- 生命周期沿用官方语义：关掉标签才终止进程；退出的终端仍占配额直到关闭；刷新页面靠 grace 重接同一 shell。
+
+### 实测记录（win32 + 真 node-pty）
+
+```
+seam backend = node-pty | socket mount = mounted
+PASS powershell  powershell.exe argv=[-NoLogo]   resized=true
+PASS gitbash     bash.exe     argv=[-i]          resized=true
+PASS msys2       bash.exe     argv=[-l]          msys=MINGW64 uname=MINGW64_NT-10.0-26300
+PASS wsl         wsl.exe      argv=[-- bash -i]  uname=Linux
+terminals after close: 0
+```
 
 ## 测试
 
@@ -218,7 +410,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 uninstall
 cd D:\workspace\projects\dsh-bash-terminal-ts
 npm install          # 安装依赖（含 typescript）
 npm run build        # tsc 编译 src/*.ts → lib/*.js；client.tsx → lib/client.js + dist/client.js；test/*.ts → test-dist/
-npm test             # node test-dist/unit.js → apply.js → client.js → terminal.js
+npm test             # unit / apply / client / terminal / shells / webterminals
+node _smoke-ui.mjs    # 真机冒烟：四类交互 shell 走真 node-pty + 真 WebSocket
 ```
 
 源码为 TypeScript（`strict` + `noUncheckedIndexedAccess`），编译产物 `lib/`、`dist/` 随仓库提交，DSH 直接按 `lib/index.js` 加载，无需安装即可使用。

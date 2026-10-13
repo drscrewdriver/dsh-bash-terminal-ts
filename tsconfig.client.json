@@ -13,5 +13,13 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["src/client.tsx", "src/client-types.d.ts"]
+  "include": [
+    "src/client.tsx",
+    "src/locales.ts",
+    "src/browser-i18n.ts",
+    "src/webterminals/browser/**/*.ts",
+    "src/webterminals/browser/**/*.tsx",
+    "src/webterminals/protocol.ts",
+    "src/shell-id.ts"
+  ]
 }

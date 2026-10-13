@@ -16,6 +16,33 @@ export interface ConfigValues {
     gitBashPath: string;
     msys2Path: string;
     wslPath: string;
+    /**
+     * The bottom terminal's MASTER switch. Off outranks every child choice: the
+     * settings row hides the per-shell switches (a switch for something that cannot
+     * run is a lie) and the routes refuse allocations.
+     */
+    bottomTerminal: boolean;
+    /**
+     * Opt in to publishing the client-side `webTerminals` service, which is what powers
+     * dsh-better-sidebar's OFFICIAL bottom "Terminal" row on a deployment that has no
+     * terminal controller. Default false: the name is also provided by the host's own
+     * controller client, cordis refuses the second provider, and the controller's provide
+     * is unguarded - so claiming it by default breaks the first-party terminal and the
+     * whole web boot on DSH 0.2.0+ (measured). Turn it on only where the official row is
+     * dead because no controller exists.
+     */
+    shimOfficialTerminal: boolean;
+    /**
+     * Browser-terminal activation (R1/R2). The default is `true` for all three:
+     * a switch means "allowed", and availability is ANDed with it by the catalog -
+     * so "detected means on" needs no probe at schema level, while an explicit
+     * `false` is a real opt-out even on a machine that has the shell.
+     */
+    shellGitBash: boolean;
+    shellMsys2: boolean;
+    shellWsl: boolean;
+    /** WSL distribution for the browser terminal; '' means the WSL default. */
+    wslDistro: string;
 }
 /** Runtime configuration schema. */
 export declare const Config: import("./dsh.js").SchemasterySchema;
@@ -178,6 +205,22 @@ export interface BackgroundResult {
     jobId: string;
 }
 export type ShellToolResult = ForegroundResult | BackgroundResult;
+/**
+ * Persist one config path through the host settings service.
+ *
+ * Shared by the model tool's `defaultShell` write and the browser terminal's
+ * activation switches, because the line-dependent part is the whole difficulty:
+ * ≤0.1.6 loaders do not register a plugin's settings namespace automatically, so
+ * the first `mutate` fails with "not registered" and the caller has to register it
+ * (with the written value as the base, so the retry sees it) and retry. On rc.1+
+ * the namespace is already owned by the loader, that branch never fires, and the
+ * plain `mutate` is the whole story.
+ * @param svc - the host `settings` service (untyped: shapes differ per line).
+ * @param path - the config path inside this plugin's entry (one level today).
+ * @throws when the line has no `mutate` at all - the caller reports it, and the
+ *  value then applies for this process only.
+ */
+export declare function persistConfigValue(svc: unknown, path: readonly string[], value: unknown): Promise<void>;
 export declare function apply(ctx: BashTerminalContext, config?: Partial<ConfigValues>): void;
 export declare const internals: {
     candidateExists: typeof candidateExists;

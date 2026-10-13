@@ -17,6 +17,11 @@ let sandboxMode = "danger-full-access"; // per-call sandbox policy mode
 let assembleHandler: ((assembly: PromptAssembly, context: unknown, next: () => Promise<PromptAssembly>) => Promise<PromptAssembly>) | null = null;
 const spawnCalls: SubprocessSpawnSpec[] = [];
 const jobsStarted: JobSpec[] = [];
+// The compat channels arrive through ctx.inject: both the settings bridge and the
+// browser-terminal routes. Resolved synchronously here (a real host defers until
+// both services exist), so apply() is asserted to MOUNT them, not skip them.
+const bridgeRoutes: string[] = [];
+const settingsMutations: Array<{ id: string; path: string[]; value: unknown }> = [];
 
 const ctx: BashTerminalContext = {
   logger: { info: () => {} },
@@ -32,11 +37,27 @@ const ctx: BashTerminalContext = {
   },
   get: (key) => key === "approval" ? { request: async () => "allowed-once" } : key === "jobs" ? { start: (spec: JobSpec) => { jobsStarted.push(spec); return "job-bg-1"; } } : undefined,
   effect: () => () => {},
+  inject: (_deps, cb) => {
+    cb({
+      webServer: { register: (route: { kind: string; path: string }) => { bridgeRoutes.push(route.path); return () => {}; } },
+      settings: {
+        mutate: async (id: string, ops: { op: string; path: string[]; value: unknown }[]) => {
+          for (const op of ops) settingsMutations.push({ id, path: op.path, value: op.value });
+        },
+      },
+      effect: (fn: () => unknown) => fn(),
+    });
+  },
   subprocess: null
 };
 // 0.1.7: the loader hands `.volatile()` fields to apply() as live refs.
 apply(ctx, { defaultShell: { get: () => userDefaultShell } } as never);
 assert.ok(registered, "tool registered");
+// Both host channels mounted: the six-line settings bridge and the browser
+// terminal's own route (its socket route is absent here because this mock webserver
+// has no registerUpgrade, which is the reported degradation, not a crash).
+assert.ok(bridgeRoutes.includes("/api/bash-terminal/config"), "config bridge registered");
+assert.ok(bridgeRoutes.includes("/api/bash-terminal/terminals"), "browser terminal route registered");
 const reg = registered as ToolDefinition;
 assert.strictEqual(reg.name, "shell");
 assert.strictEqual(reg.parameters.properties.shell, undefined, "model-facing shell param removed");

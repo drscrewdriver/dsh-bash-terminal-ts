@@ -128,6 +128,8 @@ function createBuffer(): TerminalBuffer {
 interface NodePtyTerm {
   pid: number;
   write(data: string): void;
+  /** Resize the PTY window (ConPTY propagates it to the foreground process). */
+  resize(cols: number, rows: number): void;
   kill(signal?: string): void;
   onData(callback: (chunk: string) => void): void;
   onExit(callback: (event: { exitCode: number; signal: unknown }) => void): void;
@@ -153,21 +155,45 @@ async function waitForPid(term: NodePtyTerm, timeoutMs = 5000): Promise<void> {
   }
 }
 
+/** Terminal-emulator options for one PTY allocation. */
+export interface PtyStyle {
+  /** The terminal type the PTY advertises (and the one `$TERM` should say). */
+  readonly name: string;
+  /**
+   * Variables forced into the child environment. The model tool pins
+   * `TERM=dumb`/`NO_COLOR=1` so output stays parseable; the browser terminal
+   * passes `{}` because its whole point is a coloured, cursor-controlled screen.
+   */
+  readonly forceEnv: Readonly<Record<string, string | undefined>>;
+}
+
+/** The tool's own style: a dumb, colourless, pager-free screen. */
+export const TOOL_PTY_STYLE: PtyStyle = { name: "dumb", forceEnv: { TERM: "dumb", NO_COLOR: "1" } };
+
+/** The browser terminal's style: a real xterm, colours and cursor control on. */
+export const UI_PTY_STYLE: PtyStyle = { name: "xterm-256color", forceEnv: {} };
+
 /**
  * Direct node-pty handle with the same surface the official seam returns:
- * output (stream), pid, done, write / signalForeground / terminate. Used on
- * win32 where the official spawnTerminal's process inspector is unsupported.
+ * output (stream), pid, done, write / signalForeground / terminate, plus
+ * `resize` (which the seam only grew on newer host lines, so callers probe).
+ * Used on win32, where the official `spawnTerminal`'s process inspector is
+ * unsupported.
+ *
+ * `style` is a parameter rather than a constant because the ConPTY quirks below
+ * are shared by both consumers: a second copy of this function is how the
+ * browser terminal would end up with the tool's `TERM=dumb`.
  */
-async function spawnPtyHandle(spec: TerminalSpawnSpec): Promise<TerminalHandle> {
+export async function spawnPtyHandle(spec: TerminalSpawnSpec, style: PtyStyle = TOOL_PTY_STYLE): Promise<TerminalHandle & { resize(cols: number, rows: number): void }> {
   const { argv, cwd, env, rows, cols } = spec;
   const mod = (await import("node-pty")) as unknown as { default?: { spawn: NodePtySpawn }; spawn: NodePtySpawn };
   const nodePty = mod.default ?? mod;
   const term = nodePty.spawn(argv[0]!, argv.slice(1), {
-    name: "dumb",
+    name: style.name,
     cols,
     rows,
     cwd,
-    env: { ...env, TERM: "dumb", NO_COLOR: "1" }
+    env: { ...env, ...style.forceEnv },
   });
   await waitForPid(term);
   const output = new PassThrough();
@@ -180,6 +206,9 @@ async function spawnPtyHandle(spec: TerminalSpawnSpec): Promise<TerminalHandle> 
     output,
     done,
     write: (data) => term.write(data),
+    // ConPTY honours a real resize; the tool path never calls it, so this is the
+    // one seam capability the browser terminal adds on top of the same handle.
+    resize: (nextCols, nextRows) => term.resize(nextCols, nextRows),
     // node-pty accepts no named signals on Windows: Ctrl+C is the \x03 byte
     // (ConPTY delivers it to the foreground process), other signals degrade
     // to terminating the session.

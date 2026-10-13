@@ -19,5 +19,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/client.tsx"]
+  "exclude": ["src/client.tsx", "src/webterminals/browser"]
 }

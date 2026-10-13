@@ -254,6 +254,16 @@ export interface BashTerminalContext {
     sandbox: SandboxSeam;
     get(key: string): unknown;
     effect(fn: () => void | (() => void), name?: string): unknown;
+    /**
+     * Service-arrival callback (cordis core). Both host channels mount through it:
+     * the six-line settings bridge and the browser terminal's routes. Typed to the
+     * services they actually read; the derived context carries more.
+     */
+    inject?(deps: string[], callback: (svcCtx: {
+        webServer?: unknown;
+        settings?: unknown;
+        effect(fn: () => void | (() => void), name?: string): unknown;
+    }) => void): void;
     /** Injected via `inject: ["subprocess"]`; tests may defer assignment. */
     subprocess: SubprocessSeam | null;
 }

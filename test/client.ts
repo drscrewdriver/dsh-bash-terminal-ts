@@ -52,50 +52,57 @@ const mockDefineStore: MockDefineStore = (decl) => ({
 }) as unknown as MockStore;
 
 // --- mocked services ---
-interface ScopeState { status: string; value: { defaultShell?: string }; revision: number; writable: boolean }
 interface ClientTestContext {
   slots: {
-    inject(slot: string, fn: () => unknown): void;
+    inject(slot: string, fn: () => unknown, name?: string): void;
     register(options: Record<string, unknown>, Component: unknown): Record<string, unknown>;
+    /** The ledger the client reads to decide whether to register its own section. */
+    entries?(slot: string): { options: { id?: string; key?: string } }[];
   };
   locale: { register(ns: string, dicts: Record<string, Record<string, string>>): unknown };
-  configForms: {
-    get(entryId: string): {
-      getSnapshot(): ScopeState;
-      subscribe(): () => void;
-      set(field: string, value: string): Promise<boolean>;
-      unset(field: string): Promise<boolean>;
-    };
-  };
   effect(fn: () => unknown): unknown;
+  /** Soft reads (the host-terminal probe and the optional betterSidebar). */
+  get?(name: string): unknown;
+  provide?(name: string, service: unknown): unknown;
+  inject?(deps: string[], callback: (arrived: unknown) => void): void;
 }
 interface ExportedClient {
   inject: string[];
   apply: (ctx: ClientTestContext) => void;
 }
-let scopeState: ScopeState = { status: "ready", value: { defaultShell: "gitbash" }, revision: 3, writable: true };
-const setCalls: { field: string; value: string }[] = [];
 const localeRegisters: { ns: string; dicts: Record<string, Record<string, string>> }[] = [];
 const slotRegistrations: { slot: string; fn: () => unknown }[] = [];
-const ctx: ClientTestContext = {
+const provided: Record<string, unknown> = {};
+const registeredTabs: Record<string, unknown>[] = [];
+const betterSidebarStub = { registerTab: (descriptor: Record<string, unknown>) => { registeredTabs.push(descriptor); return () => {}; } };
+const rawCtx: ClientTestContext = {
   slots: {
     inject: (slot: string, fn: () => unknown) => { slotRegistrations.push({ slot, fn }); },
     register: (options: Record<string, unknown>, Component: unknown) => ({ ...options, Component })
   },
   locale: { register: (ns: string, dicts: Record<string, Record<string, string>>) => { localeRegisters.push({ ns, dicts }); } },
-  configForms: {
-    get: (entryId: string) => {
-      assert.strictEqual(entryId, "tool-bash-terminal", "configForms entry id");
-      return {
-        getSnapshot: () => scopeState,
-        subscribe: () => () => {},
-        set: (field: string, value: string) => { setCalls.push({ field, value }); return Promise.resolve(true); },
-        unset: () => Promise.resolve(true)
-      };
-    }
-  },
-  effect: (fn: () => unknown) => { fn(); }
+  effect: (fn: () => unknown) => { fn(); },
+  // The host publishes no `webTerminals` here, and `betterSidebar` is reachable ONLY
+  // through the soft read - never as a property.
+  get: (name: string) => (name === "betterSidebar" ? betterSidebarStub : undefined),
+  provide: (name: string, service: unknown) => { provided[name] = service; },
 };
+/**
+ * The apply context, wrapped the way cordis actually hands one to a client plugin: a
+ * Proxy that refuses any property the module did not declare in its `inject` list.
+ * Without this the test would keep passing the exact code that crashed on a live
+ * 0.2.0-rc.2 host (`ctx.betterSidebar` -> "cannot get property 'betterSidebar' without
+ * inject"), because a plain object answers `undefined` where the host throws.
+ */
+const DECLARED = new Set(["slots", "locale", "effect", "get", "provide", "inject"]);
+const ctx = new Proxy(rawCtx, {
+  get(target: ClientTestContext, key: string | symbol): unknown {
+    if (typeof key === "string" && !DECLARED.has(key) && !(key in target)) {
+      throw new Error(`cannot get property "${key}" without inject`);
+    }
+    return Reflect.get(target, key);
+  },
+}) as ClientTestContext;
 
 // --- load the built client bundle under a fake module loader ---
 function readBundle(rel: string): string {
@@ -106,18 +113,20 @@ function readBundle(rel: string): string {
   }
 }
 
-// DSH >= 0.1.5 regression guard: the platform seed table spells the store
-// package @deepseek-ai/dsh-client-store; the retired runtime name would miss it.
-// Guard EVERY shipped bundle, not just lib/client.js: package.json "files" ships
-// both lib/ and dist/, DSH's loader reads lib/client.js, and dist/client*.js is
-// the legacy compatibility copy consumed by older hosts. A regression that only
-// reaches one artifact still ships through npm, so checking a single file would
-// leave the guard blind to it.
+// Bundle-name guards. Two directions, both earned: (a) the retired
+// `dsh-client-runtime` name must never come back (the platform seed table spells
+// the store `@deepseek-ai/dsh-client-store`, so the old name resolves to nothing);
+// (b) this plugin deliberately requires NO client package at all - 0.1.0/0.1.1 have
+// no browser module table, so every read/write goes through the host config bridge
+// (`src/client.tsx` header). Guard EVERY shipped bundle: package.json "files" ships
+// both lib/ and dist/, DSH's loader reads lib/client.js, and dist/client*.js is the
+// legacy compatibility copy consumed by older hosts. A regression that only reaches
+// one artifact still ships through npm.
 const BUNDLE_PATHS = ["../lib/client.js", "../dist/client.js", "../dist/client.core.js"];
 for (const rel of BUNDLE_PATHS) {
   const text = readBundle(rel);
-  assert.ok(text.includes("@deepseek-ai/dsh-client-store"), rel + " requests the seeded client store");
   assert.ok(!text.includes("dsh-client-runtime"), rel + " does not request the retired client runtime");
+  assert.ok(!text.includes("@deepseek-ai/dsh-client-store"), rel + " stays free of client-package requires (compat-legacy bridge only)");
 }
 
 const bundle = readBundle("../lib/client.js");
@@ -126,7 +135,11 @@ assert.ok(bundle.includes("window.__ModuleLoader__.load"), "bundle wrapped");
 // branch renders a Menu of items, not a <select> of <option>.
 const menuProps: { items?: { id: string; label: string }[] }[] = [];
 let exported: ExportedClient | undefined;
-const globalWithWindow = globalThis as typeof globalThis & { window?: unknown };
+const globalWithWindow = globalThis as typeof globalThis & { window?: unknown; self?: unknown };
+// The bundle now carries xterm, whose UMD wrapper resolves its global through `self`
+// at evaluation time. A browser always has it; the harness must not pretend otherwise
+// just because node does not.
+globalWithWindow.self = globalThis;
 globalWithWindow.window = {
   __ModuleLoader__: {
     load: ({ id, factory }: { id: string; factory: (require: (name: string) => unknown) => unknown }) => {
@@ -156,11 +169,50 @@ globalWithWindow.window = {
 };
 new Function(bundle)();
 assert.ok(exported, "client module exports");
-assert.deepStrictEqual(exported!.inject, ["slots", "locale", "configForms"]);
+assert.deepStrictEqual(exported!.inject, ["slots", "locale"]);
 assert.strictEqual(typeof exported!.apply, "function");
 
 // --- run apply ---
 exported!.apply(ctx);
+
+// The service-collision gate (measured on a live 0.2.0-rc.2 host). This assertion used
+// to read the opposite way - "provided when the host has none" - which is exactly how
+// the defect got baked in: the host's `dsh-api-terminal-controller` provides
+// `webTerminals` with an UNGUARDED ctx.provide, so if our client wins the boot race the
+// controller's provide throws, the entry fails, and the whole web boot renders
+// "Failed to load plugins". Winning a race over a first-party service is never
+// acceptable, so the client must not publish this name at all - the bottom-dock feature
+// is this plugin's own tab, which needs no service.
+{
+  assert.strictEqual(provided["webTerminals"], undefined, "the client never provides webTerminals");
+  for (const rel of ["../src/client.tsx"]) {
+    // Strip comments first: this file DOCUMENTS why it must not provide the service, so
+    // a raw substring test would match its own prose and the gate would be unfixable.
+    const code = readFileSync(new URL(rel, import.meta.url), "utf8")
+      .split("\n")
+      // Both comment shapes: `// line` and the ` * ...` body of a block comment.
+      .filter((line) => !/^(\/\/|\*|\/\*)/.test(line.trimStart()))
+      .map((line) => line.replace(/\/\/[^'"`]*$/u, ""))
+      .join("\n");
+    // Exactly one publish site, and it must be the gated one. "Never provide" was the
+    // first cut of this rule and it was too strong: the official bottom row genuinely
+    // needs the service on deployments with no controller. What is NOT acceptable is
+    // providing it without first reading whether the name is free - that is the race
+    // that failed the host's own controller entry on 0.2.0-rc.2.
+    const provideSites = [...code.matchAll(/\.provide\??\.?\(/g)];
+    assert.strictEqual(provideSites.length, 1, `${rel} has exactly one ctx.provide call site`);
+    for (const site of provideSites) {
+      const guard = code.slice(Math.max(0, site.index - 400), site.index);
+      assert.ok(guard.includes("looksLikeTerminals("), `${rel} checks the service is free before publishing it`);
+    }
+    // The client context is a Proxy: reading a service that is not in the declared
+    // `inject` list throws "cannot get property X without inject" and takes the whole
+    // guarded block down with it. Only ctx.get may look at an undeclared service.
+    for (const name of ["betterSidebar", "webTerminals"]) {
+      assert.ok(!new RegExp(`ctx\\.${name}[^:]`).test(code), `${rel} reads ${name} through ctx.get, never as a property`);
+    }
+  }
+}
 
 // locale dictionaries registered
 assert.strictEqual(localeRegisters.length, 1);
@@ -193,63 +245,162 @@ assert.strictEqual(
 );
 assert.strictEqual(typeof enDict["shell.unavailable"], "string", "unavailable fallback copy");
 
-// settings card registered into the family shared tab (dsh-thinking-levels hub)
-assert.strictEqual(slotRegistrations.length, 1);
-assert.strictEqual(slotRegistrations[0].slot, "dsh-family.tab");
-const regObj = slotRegistrations[0].fn() as Record<string, unknown>;
-const reg = regObj;
+// Four arms, two landing points. The settings live on the bundle detail page and on the
+// family tab; the plugin-item card is the 0.1.2/0.1.5 era-equivalent of the bundle card,
+// and the own-section arm is the fallback for a profile without the family container.
+const seat = (slot: string) => slotRegistrations.find((entry) => entry.slot === slot);
+assert.ok(seat("dsh-family.tab"), "the family tab seat is injected");
+assert.ok(seat("plugins.bundle.config"), "the bundle detail card is injected");
+assert.ok(seat("settings.plugin.item"), "the legacy (0.1.2/0.1.5) plugin settings card is injected");
+assert.ok(seat("settings.section"), "the fallback section is injected");
+// The overlay is still registered - but it renders nothing unless the HOST reports that
+// its line has no settings page at all (0.1.0/0.1.1). Deciding at apply time would race
+// the probe, so the gate lives in the component.
+const overlay = seat("shell.overlay");
+assert.ok(overlay, "the last-resort panel is registered on every line");
+const overlayObj = overlay!.fn() as Record<string, unknown>;
+assert.strictEqual(typeof overlayObj.Component, "function", "overlay component passed");
+const family = seat("dsh-family.tab")!;
+const regObj = family.fn() as Record<string, unknown>;
 const Component = regObj.Component;
-assert.strictEqual(reg.name, "dsh-family.tab");
-assert.strictEqual(reg.id, "bash-terminal-shell");
-assert.strictEqual(typeof reg.order, "number");
-assert.strictEqual(reg.locale, "settings.bash-terminal");
-assert.ok(reg.store && typeof (reg.store as unknown as { create: unknown }).create === "function", "store factory passed to register");
+assert.strictEqual(regObj.name, "dsh-family.tab");
+assert.strictEqual(regObj.id, "bash-terminal-shell", "the family-tab seat identity is fixed (contract: never rename)");
+assert.strictEqual(typeof regObj.order, "number", "a seat that renders after the shell row");
+assert.strictEqual(regObj.locale, "settings.bash-terminal");
 assert.strictEqual(typeof Component, "function", "row component passed");
 
-// inject callback binds actions, pushes initial snapshot, exposes setShell
-let lastSync: unknown[] = [];
-interface InjectedFace { setShell: (value: string) => void }
-const injected = (reg.inject as (actions: unknown) => InjectedFace)({ sync: (...args: unknown[]) => { lastSync = args; } });
-assert.ok(injected && typeof injected.setShell === "function");
-assert.deepStrictEqual(lastSync, ["gitbash", 3, true, "ready"], "initial snapshot pushed (user default gitbash)");
+// One source of truth: every landing point renders THE SAME component, so a change to
+// the settings body cannot land on one surface and silently miss another.
+const bundleCard = seat("plugins.bundle.config")!.fn() as Record<string, unknown>;
+assert.strictEqual(bundleCard.key, "dsh-bash-terminal-ts", "the bundle card is keyed by the package name");
+assert.strictEqual(bundleCard.Component, Component, "bundle card and family tab render the same component");
+const pluginCard = seat("settings.plugin.item")!.fn() as Record<string, unknown>;
+assert.strictEqual(pluginCard.key, "settings.bash-terminal", "the legacy card is keyed by the settings namespace");
+assert.strictEqual(pluginCard.Component, Component, "and renders the same component too");
 
-// setShell writes through to the settings scope
-injected.setShell("wsl");
-assert.deepStrictEqual(setCalls, [{ field: "defaultShell", value: "wsl" }]);
+// The multi-shell bottom tab: this is what makes Git Bash and MSYS2 both reachable on
+// a host that ships its OWN terminal controller (that menu de-duplicates by
+// executable file name, so both `bash.exe` entries collapse into one). `bottomOnly`
+// is load-bearing: without it the type also becomes a capsule in DSH's native right
+// sidebar, i.e. a second "Terminal" row next to the host's.
+{
+  assert.strictEqual(registeredTabs.length, 1, "exactly one tab registered when betterSidebar is present");
+  const descriptor = registeredTabs[0] as Record<string, unknown>;
+  assert.strictEqual(descriptor.id, "dsh-bash-terminal-ts:multi", "the tab id is namespaced to this plugin");
+  assert.strictEqual(descriptor.bottomOnly, true, "offered only in the bottom workbench");
+  assert.strictEqual(typeof descriptor.title, "function", "title follows the active locale");
+  assert.ok(typeof descriptor.title === "function" && String(descriptor.title()).length > 0, "and is not empty");
+  assert.strictEqual(typeof descriptor.description, "function", "the + menu shows a real description");
+  assert.strictEqual(typeof descriptor.component, "function", "a component is provided");
+  assert.strictEqual(typeof descriptor.available, "function", "with an availability predicate");
+}
 
-// row component renders through real React (DSH-native Menu/Button are mocked)
-const { renderToString } = loadShared("react-dom/server") as ReactDomServerLike;
-const renderState = { shell: "wsl", revision: 3, writable: true, status: "ready" as const };
-const selectors: unknown[] = [];
-const fakeUseStore = (sel: (s: typeof renderState) => unknown) => { selectors.push(sel(renderState)); return selectors[selectors.length - 1]; };
-const t = (k: string) => ({ "shell.title": "默认终端", "shell.powershell": "PowerShell", "shell.gitbash": "Git Bash", "shell.msys2": "MSYS2", "shell.wsl": "WSL" }[k] ?? k);
+// The row renders through real React with NO host services reachable (there is no
+// fetch server in a node run), which is exactly the degradation path that must not
+// throw: the preference row shows its static shell list and the dock section says
+// the routes are not mounted, rather than rendering a blank card.
 const React = loadShared("react") as ReactLike;
-const html = renderToString(React.createElement(Component, { t, useStore: fakeUseStore, setShell: injected.setShell }));
-assert.ok(html.includes("默认终端"), "row renders the title");
-assert.ok(!html.includes("AI 无法更改"), "removed the 'AI cannot change' phrase");
-assert.ok(html.includes("WSL"), "selector shows the current shell label");
+const { renderToString } = loadShared("react-dom/server") as ReactDomServerLike;
+const html = renderToString(React.createElement(Component, {}));
+assert.ok(html.includes("默认终端"), "row renders the zh title (the module fallback, since this mock has no locale.bind)");
 assert.ok(html.includes("btSelector"), "selector uses the official capsule class");
-assert.deepStrictEqual(selectors, ["wsl", true, "ready"], "component reads shell + writable + status from store");
+assert.ok(!html.includes("AI 无法更改"), "removed the 'AI cannot change' phrase");
+assert.ok(html.includes("宿主尚未挂载终端路由"), "the dock section reports an unmounted route instead of going blank");
 
-// The rendered option list covers every host shell id, in the host's order, and
-// each entry is labelled through the locale dictionary.
-assert.strictEqual(menuProps.length, 1, "menu rendered exactly once");
-const menuItems = menuProps[0].items ?? [];
-assert.deepStrictEqual(menuItems.map((item) => item.id), hostShells, "menu offers every host shell id in host order");
-assert.deepStrictEqual(
-  menuItems.map((item) => item.label),
-  ["PowerShell", "Git Bash", "MSYS2", "WSL"],
-  "menu labels come from the dictionaries"
+// The overlay stays silent while the host reports a settings page (the probe has not
+// answered in this mock, which is the same "do not show a second surface" default).
+assert.strictEqual(
+  renderToString(React.createElement(overlayObj.Component as () => unknown, {})),
+  "",
+  "no floating panel while the host has (or may have) a settings page",
 );
+
+// The drift guard that matters: the option list the browser offers must be the
+// host's own backends, in the host's order, labelled from the dictionaries. The picker
+// keeps its options mounted and hides the list with the `hidden` attribute precisely so
+// this stays checkable from rendered markup.
+const optionIds = [...html.matchAll(/data-shell="([^"]+)"/g)].map((match) => match[1]);
+assert.deepStrictEqual(optionIds, hostShells, "rendered options match the host shell list, in host order");
+for (const label of ["PowerShell", "Git Bash", "MSYS2", "WSL"]) {
+  assert.ok(html.includes(label), `the rendered option list labels ${label}`);
+}
 assert.ok(html.includes("MSYS2"), "rendered row includes the MSYS2 entry");
 
-// settings change -> bound actions sync again (subscribe callback fires push)
-scopeState = { status: "ready", value: { defaultShell: "powershell" }, revision: 4, writable: true };
-// re-invoke the stored subscribe callback path: the bundle registered a
-// subscription when apply ran; we captured nothing, so emulate by calling
-// the register inject again with a fresh bound (fresh push uses new state).
-const injected2 = (reg.inject as (actions: unknown) => InjectedFace)({ sync: (...args: unknown[]) => { lastSync = args; } });
-assert.deepStrictEqual(lastSync, ["powershell", 4, true, "ready"], "re-push after settings change");
-void injected2;
+// No native <select> anywhere in the client: the option popup it opens is painted by the
+// operating system, so it ignored the host theme and came out unreadable in dark mode.
+// The replacement must take the host's own overlay token, which is defined per theme.
+// Comments are stripped first - this file's own prose explains why <select> is banned, and
+// a shape gate that reads documentation as code reports the opposite of what it guards.
+const stripComments = (text: string) => text.split("\n").filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line)).join("\n");
+for (const rel of ["../src/client.tsx", "../src/webterminals/browser/tab.tsx", "../src/webterminals/browser/shell-picker.tsx"]) {
+  const source = stripComments(readFileSync(new URL(rel, import.meta.url), "utf8"));
+  assert.ok(!/<select[\s>]/.test(source), `${rel} renders no native <select>`);
+  assert.ok(!/<option[\s>]/.test(source), `${rel} renders no native <option>`);
+}
+const pickerSource = readFileSync(new URL("../src/webterminals/browser/shell-picker.tsx", import.meta.url), "utf8");
+assert.ok(pickerSource.includes("btPickList"), "the picker draws its own list");
+const css = readFileSync(new URL("../src/client.tsx", import.meta.url), "utf8");
+assert.ok(/\.btPickList\{[^}]*--dsw-alias-bg-overlay/.test(css), "the popup surface uses the host's themed overlay token");
+
+// The priority rule, both directions. Contributing a card to a section that nobody
+// renders would leave the user with no settings at all, so the fallback registers its own
+// top-level section - but ONLY when the family container is absent, and under its own id:
+// shadowing `dsh-family` is the accident the family contract forbids (double nav rows).
+// The decision is taken when the host DECLARES the section (the panel-open event), never
+// at apply time, because the container belongs to another plugin's client.
+function sectionArms(ledger: { options: { id?: string } }[]): Record<string, unknown>[] {
+  const regs: Record<string, unknown>[] = [];
+  const mock: ClientTestContext = {
+    slots: {
+      inject: (slot: string, fn: () => unknown) => {
+        if (slot !== "settings.section") return;
+        (fn() as Generator<unknown>).next();
+      },
+      register: (options: Record<string, unknown>, Card: unknown) => { regs.push({ ...options, Component: Card }); return options; },
+      entries: (slot: string) => (slot === "settings.section" ? ledger : []),
+    },
+    locale: { register: () => undefined },
+    effect: (fn: () => unknown) => fn(),
+    get: () => undefined,
+  };
+  exported!.apply(mock);
+  return regs;
+}
+{
+  const withFamily = sectionArms([{ options: { id: "dsh-family" } }]);
+  assert.ok(!withFamily.some((entry) => entry.name === "settings.section"), "no second section while the family container exists");
+
+  const withoutFamily = sectionArms([]);
+  const own = withoutFamily.find((entry) => entry.name === "settings.section");
+  assert.ok(own, "the plugin registers its own section when the family container is absent");
+  assert.strictEqual(own!.id, "bash-terminal", "under its own id, never shadowing dsh-family");
+  assert.strictEqual(typeof own!.label, "function", "with a locale-aware label");
+  assert.strictEqual(own!.Component, Component, "and the same settings body");
+}
+
+// The arrival path. A one-shot `ctx.get('betterSidebar')` would register the tab only
+// when dsh-better-sidebar's client happens to run first; on the other order the tab is
+// silently absent - the kind of failure that never shows up in a log. So the client
+// must also ask to be told when the service arrives.
+{
+  const lateTabs: Record<string, unknown>[] = [];
+  let arrival: ((ctx: unknown) => void) | undefined;
+  const lateCtx: ClientTestContext & { inject: (deps: string[], cb: (ctx: unknown) => void) => void } = {
+    slots: { inject: () => {}, register: () => ({}) },
+    locale: { register: () => undefined },
+    effect: (fn: () => unknown) => fn(),
+    get: () => undefined,
+    inject: (_deps, cb) => {
+      arrival = cb;
+    },
+  };
+  exported!.apply(lateCtx);
+  assert.ok(arrival !== undefined, "the client subscribed to betterSidebar's arrival");
+  assert.strictEqual(registeredTabs.length, 1, "nothing registered before the service showed up");
+  arrival!({ betterSidebar: { registerTab: (descriptor: Record<string, unknown>) => { lateTabs.push(descriptor); return () => {}; } } });
+  assert.strictEqual(lateTabs.length, 1, "the tab registers the moment it arrives");
+  assert.strictEqual(lateTabs[0].bottomOnly, true, "bottom-only on the arrival path too");
+  assert.strictEqual(lateTabs[0].id, "dsh-bash-terminal-ts:multi", "same identity as the eager path");
+}
 
 console.log("CLIENT LOGIC TESTS PASSED");

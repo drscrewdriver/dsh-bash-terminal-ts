@@ -27,6 +27,8 @@ export interface Schemastery {
     object(fields: Record<string, SchemasterySchema>): SchemasterySchema;
     string(): SchemasterySchema;
     number(): SchemasterySchema;
+    /** Accept booleans (the fork's `Static.boolean`; renders as a switch). */
+    boolean(): SchemasterySchema;
     const(value: string): SchemasterySchema;
     union(schemas: SchemasterySchema[]): SchemasterySchema;
 }

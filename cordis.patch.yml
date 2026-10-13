@@ -3,3 +3,69 @@
 - insert:
     - id: tool-bash-terminal
       name: 'dsh-bash-terminal-ts'
+
+# ---------------------------------------------------------------------------
+# The host's own right-sidebar terminal: which shells its selector offers.
+#
+# Why a plugin touches this at all (user decision, 2026-10-13, overriding the
+# original "never modify the host terminal row" rule): the official menu builds
+# its list from `shellCandidates` through `discoverShells`, which keys a Map by
+# the executable FILE NAME (`shellKind` = basename, lower-cased, `.exe`
+# stripped) and keeps the earliest entry. Git Bash and MSYS2 are both
+# `bash.exe`, so on the stock list MSYS2 can never appear. A hard link at
+# `C:\msys64\usr\bin\msys-bash.exe` gives it a distinct kind; measured over a
+# real PTY, bash does not mis-classify itself under the new name
+# (`argv0=/usr/bin/msys-bash`, `$BASH_VERSION` 5.3.15, `gcc` resolving to
+# /mingw64/bin, correct `-dumpmachine`).
+#
+# Why all twelve keys are spelled out: a patch replaces the targeted row's WHOLE
+# config. Omit one and that limit silently reverts to nothing at all - each
+# field's `.default()` applies when the field is absent from the schema input,
+# and a replaced row provides no input for the keys it does not mention.
+# `scripts/check-artifacts.mjs` asserts the full key set, so a host upgrade that
+# adds a thirteenth key fails the build instead of quietly dropping a limit.
+#
+# Which entries are prepended, and why nothing is displaced: `discoverShells` keeps the
+# EARLIEST entry per executable file name, and on Windows a bare `bash` resolves to
+# `C:\Windows\System32\bash.exe` - the WSL forwarder. Listing `Git\bin\bash.exe` here (an
+# earlier revision did exactly that) would claim that key for Git and silently DELETE WSL
+# from the menu. Both additions therefore carry their own file name: `msys-bash.exe` is a
+# hard link in the user-writable MSYS2 tree, and `git-bash.exe` is a hard link inside
+# `C:\Program Files\Git\bin\`, which needs one elevated step by the operator:
+#
+#   New-Item -ItemType HardLink -Path 'C:\Program Files\Git\bin\git-bash.exe' -Target 'C:\Program Files\Git\bin\bash.exe'
+#
+# (It has to live in that directory: bash derives its POSIX root from its own path, and a
+# link elsewhere cannot even be created - CreateHardLink needs write access to the source
+# file, which Program Files denies a standard user.) Until that link exists the candidate
+# is skipped, so the row is correct either way and the stock candidates stay untouched.
+#
+# `shell` is deliberately absent: that means "no explicit default", so the
+# controller uses the execution environment's default shell - the stock
+# behaviour, unchanged.
+#
+# Degradation: `discoverShells` catches SubprocessExecutableNotFoundError per
+# candidate, so a machine without Git, or without the link, simply offers fewer
+# shells. This row cannot fail.
+# ---------------------------------------------------------------------------
+- id: terminal-controller
+  config:
+    shellCandidates:
+      - 'C:\Program Files\Git\bin\git-bash.exe'
+      - 'C:\msys64\usr\bin\msys-bash.exe'
+      - zsh
+      - bash
+      - fish
+      - pwsh
+      - powershell
+      - cmd
+    maxTerminals: 8
+    maxCols: 500
+    maxRows: 200
+    scrollback: 1000
+    maxBufferedBytes: 2097152
+    maxInputBytes: 65536
+    disposeGraceMs: 1000
+    unattendedTimeoutMs: 7200000
+    activityPollIntervalMs: 30000
+    cleanupRetryMs: 60000

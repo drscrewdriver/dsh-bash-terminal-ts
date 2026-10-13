@@ -1,4 +1,4 @@
-import type { BashTerminalContext, ResolvedPaths, TerminalHandle } from "./dsh-types.js";
+import type { BashTerminalContext, ResolvedPaths, TerminalHandle, TerminalSpawnSpec } from "./dsh-types.js";
 declare const TERMINAL_SIGNALS: readonly ["SIGINT", "SIGTERM", "SIGKILL", "SIGTSTP", "SIGHUP"];
 export type TerminalSignal = (typeof TERMINAL_SIGNALS)[number];
 interface TerminalBufferRead {
@@ -15,6 +15,35 @@ interface TerminalBuffer {
 }
 /** Interactive-shell argv (no -c: the terminal itself is the session). */
 export declare function terminalArgv(shell: string, paths: ResolvedPaths, distro?: string): Array<string | undefined>;
+/** Terminal-emulator options for one PTY allocation. */
+export interface PtyStyle {
+    /** The terminal type the PTY advertises (and the one `$TERM` should say). */
+    readonly name: string;
+    /**
+     * Variables forced into the child environment. The model tool pins
+     * `TERM=dumb`/`NO_COLOR=1` so output stays parseable; the browser terminal
+     * passes `{}` because its whole point is a coloured, cursor-controlled screen.
+     */
+    readonly forceEnv: Readonly<Record<string, string | undefined>>;
+}
+/** The tool's own style: a dumb, colourless, pager-free screen. */
+export declare const TOOL_PTY_STYLE: PtyStyle;
+/** The browser terminal's style: a real xterm, colours and cursor control on. */
+export declare const UI_PTY_STYLE: PtyStyle;
+/**
+ * Direct node-pty handle with the same surface the official seam returns:
+ * output (stream), pid, done, write / signalForeground / terminate, plus
+ * `resize` (which the seam only grew on newer host lines, so callers probe).
+ * Used on win32, where the official `spawnTerminal`'s process inspector is
+ * unsupported.
+ *
+ * `style` is a parameter rather than a constant because the ConPTY quirks below
+ * are shared by both consumers: a second copy of this function is how the
+ * browser terminal would end up with the tool's `TERM=dumb`.
+ */
+export declare function spawnPtyHandle(spec: TerminalSpawnSpec, style?: PtyStyle): Promise<TerminalHandle & {
+    resize(cols: number, rows: number): void;
+}>;
 export interface TerminalSessionInfo {
     sessionId: string;
     shell: string;

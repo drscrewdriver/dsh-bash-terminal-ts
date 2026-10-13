@@ -1,0 +1,4 @@
+{
+  "title": "Terminal inferior",
+  "description": "La herramienta shell y un terminal incrustado del panel inferior (PowerShell / Git Bash / MSYS2 / WSL), con activación por shell y cadena de sustitución."
+}

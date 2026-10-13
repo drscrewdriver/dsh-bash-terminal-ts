@@ -11,3 +11,11 @@ node_modules/
 
 # typescript build output (test runners)
 test-dist/
+
+# packed artifacts (regenerate with: npm pack)
+*.tgz
+
+# local dev harness: scratch probes and install helpers that carry machine-specific
+# paths. Path-agnostic tooling belongs in scripts/ (it ships with the package).
+_*.mjs
+_*.ps1

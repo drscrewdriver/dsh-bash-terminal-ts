@@ -112,6 +112,17 @@ if ($Action -eq "install") {
   Write-Host "  2) run:  dsh web"
   Write-Host "After restart, open Settings -> General: a 'Default terminal' dropdown"
   Write-Host "(PowerShell / Git Bash / MSYS2 / WSL) appears; the shell tool obeys it."
+
+  Write-Host ""
+  Write-Host "Optional - shells inside the HOST's own terminal menu:"
+  Write-Host "  The bundle patch adds two candidates by file name, msys-bash.exe and"
+  Write-Host "  git-bash.exe. The host de-duplicates shells by executable file name and"
+  Write-Host "  Git Bash / MSYS2 are both bash.exe, so without an alias of its own a shell"
+  Write-Host "  can never appear there. Absent links are skipped per candidate: the menu"
+  Write-Host "  stays exactly as before and nothing fails. Create them with"
+  Write-Host "    node scripts/link-shells.mjs"
+  Write-Host "  (the Git one needs an elevated run; README 'shell aliases' has the mklink"
+  Write-Host "  commands and a prompt to hand the job to a fully-permissioned agent)."
 } else {
   Write-Host "[1/4] remove links ..."
   if (Test-Path $pluginLink) { Remove-Item $pluginLink -Force -Recurse; Write-Host "  removed: $pluginLink" }

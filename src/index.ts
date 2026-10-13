@@ -24,6 +24,7 @@
 
 import { lstatSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
+import { mountBrowserTerminals } from "./webterminals/mount.js";
 import {
   ESCALATION_TARGETS,
   TOOL_ABORTED,
@@ -98,6 +99,33 @@ export interface ConfigValues {
   gitBashPath: string;
   msys2Path: string;
   wslPath: string;
+  /**
+   * The bottom terminal's MASTER switch. Off outranks every child choice: the
+   * settings row hides the per-shell switches (a switch for something that cannot
+   * run is a lie) and the routes refuse allocations.
+   */
+  bottomTerminal: boolean;
+  /**
+   * Opt in to publishing the client-side `webTerminals` service, which is what powers
+   * dsh-better-sidebar's OFFICIAL bottom "Terminal" row on a deployment that has no
+   * terminal controller. Default false: the name is also provided by the host's own
+   * controller client, cordis refuses the second provider, and the controller's provide
+   * is unguarded - so claiming it by default breaks the first-party terminal and the
+   * whole web boot on DSH 0.2.0+ (measured). Turn it on only where the official row is
+   * dead because no controller exists.
+   */
+  shimOfficialTerminal: boolean;
+  /**
+   * Browser-terminal activation (R1/R2). The default is `true` for all three:
+   * a switch means "allowed", and availability is ANDed with it by the catalog -
+   * so "detected means on" needs no probe at schema level, while an explicit
+   * `false` is a real opt-out even on a machine that has the shell.
+   */
+  shellGitBash: boolean;
+  shellMsys2: boolean;
+  shellWsl: boolean;
+  /** WSL distribution for the browser terminal; '' means the WSL default. */
+  wslDistro: string;
 }
 
 /** Runtime configuration schema. */
@@ -108,7 +136,16 @@ export const Config = z.object({
   pwshPath: z.string().default(""),
   gitBashPath: z.string().default(""),
   msys2Path: z.string().default(""),
-  wslPath: z.string().default("")
+  wslPath: z.string().default(""),
+  // `.volatile()` on the new fields: the browser terminal reads them on every
+  // allocation, and a flip in the settings page has to take effect without a
+  // restart (0.1.7+ hands apply a live ref; older lines re-read the same value).
+  bottomTerminal: z.boolean().default(true).volatile(),
+  shimOfficialTerminal: z.boolean().default(false).volatile(),
+  shellGitBash: z.boolean().default(true).volatile(),
+  shellMsys2: z.boolean().default(true).volatile(),
+  shellWsl: z.boolean().default(true).volatile(),
+  wslDistro: z.string().default("").volatile()
 });
 
 // ---- executable resolution ------------------------------------------------
@@ -667,14 +704,49 @@ const BACKGROUND_OUTPUT_PROPERTIES: Record<string, JsonSchemaNode> = {
   jobId: { type: "string", required: true }
 };
 
+/**
+ * Persist one config path through the host settings service.
+ *
+ * Shared by the model tool's `defaultShell` write and the browser terminal's
+ * activation switches, because the line-dependent part is the whole difficulty:
+ * ≤0.1.6 loaders do not register a plugin's settings namespace automatically, so
+ * the first `mutate` fails with "not registered" and the caller has to register it
+ * (with the written value as the base, so the retry sees it) and retry. On rc.1+
+ * the namespace is already owned by the loader, that branch never fires, and the
+ * plain `mutate` is the whole story.
+ * @param svc - the host `settings` service (untyped: shapes differ per line).
+ * @param path - the config path inside this plugin's entry (one level today).
+ * @throws when the line has no `mutate` at all - the caller reports it, and the
+ *  value then applies for this process only.
+ */
+export async function persistConfigValue(svc: unknown, path: readonly string[], value: unknown): Promise<void> {
+  const service = svc as {
+    mutate?: (id: string, ops: { op: "set"; path: string[]; value: unknown }[]) => Promise<unknown>;
+    register?: (id: string, schema: unknown, opts?: unknown) => unknown;
+  };
+  if (typeof service?.mutate !== "function") {
+    throw new Error(
+      "settings service exposes no mutate on this host line - the value applies for this process only; persist via cordis.patch.yml"
+    );
+  }
+  const ops = [{ op: "set" as const, path: [...path], value }];
+  try {
+    await service.mutate(ENTRY_ID, ops);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (!/not registered/i.test(message) || typeof service.register !== "function") {
+      throw e;
+    }
+    console.warn(`[dsh-bash-terminal-ts] legacy line: registering settings namespace ${ENTRY_ID}`);
+    service.register(ENTRY_ID, Config, { base: { [path.join(".")]: value } });
+    await service.mutate(ENTRY_ID, ops);
+    console.warn("[dsh-bash-terminal-ts] legacy settings namespace registered");
+  }
+}
+
 // ---- plugin -------------------------------------------------------------------
 
 export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = {}): void {
-  if (process.platform !== "win32") {
-    ctx.logger?.info?.("dsh-bash-terminal-ts: only meaningful on win32; skipping tool registration");
-    return;
-  }
-  const backgroundEnabled = true;
   const paths = resolveAllPaths(config);
   // 0.1.7: `defaultShell` is a `.volatile()` config field — the loader hands
   // `apply` a live ref and the latest value is resolved on every read; there
@@ -682,7 +754,8 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // compat-legacy: ≤0.1.6 的宿主没有配置热重载,bridge 写入走这个覆盖值
   // (rc.1+ 上 volatile 与覆盖值同源同写,二者一致)。
   let shellOverride: string | undefined;
-  const currentShell = (): string => {
+  /** The stored value, verbatim - including one that is no longer selectable. */
+  const storedShell = (): string => {
     if (typeof shellOverride === "string" && (SHELLS as readonly string[]).includes(shellOverride)) {
       return shellOverride;
     }
@@ -691,9 +764,61 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     const got = typeof v?.get === "function" ? v.get() : undefined;
     return typeof got === "string" ? got : DEFAULT_SHELL;
   };
-  if (!(SHELLS as readonly string[]).includes(currentShell())) {
-    throw new Error(`dsh-bash-terminal-ts: invalid defaultShell ${JSON.stringify(currentShell())}`);
+  let warnedStale = false;
+  /**
+   * The shell the TOOL will run. Deliberately the stored value, un-sanitised:
+   * `buildArgv`/`terminalArgv` throw for anything outside SHELLS, so an
+   * out-of-enum choice fails closed at call time rather than quietly running the
+   * command in a different shell than the model was told about.
+   */
+  const currentShell = storedShell;
+  /**
+   * What the model is TOLD. Sanitised, because this one runs on every prompt
+   * assembly: an invalid stored value must not break the whole prompt, and naming
+   * the floor is honest about what a successful call would use.
+   */
+  const describedShell = (): string => {
+    const stored = storedShell();
+    if ((SHELLS as readonly string[]).includes(stored)) return stored;
+    if (!warnedStale) {
+      warnedStale = true;
+      ctx.logger?.warn?.(`dsh-bash-terminal-ts: defaultShell ${JSON.stringify(stored)} is not a selectable backend; shell calls will fail closed and the bottom terminal falls back to ${DEFAULT_SHELL}`);
+    }
+    return DEFAULT_SHELL;
+  };
+
+  // The browser terminal (bottom dock / embedded shell). Mounted BEFORE the
+  // win32 return below: the model tool is Windows-only, the terminal is not
+  // (finding F1). Its routes report their own availability, so a host without
+  // `registerUpgrade` or without any PTY backend shows a reason instead of a
+  // dead panel.
+  const browserTerminals = mountBrowserTerminals({
+    ctx: ctx as never,
+    config: config as Record<string, unknown>,
+    paths,
+    configuredShell: storedShell,
+    persist: async (svc, path, value) => {
+      await persistConfigValue(svc, path, value);
+      // ≤0.1.6 hosts have no config hot-reload, so mirror a defaultShell write into
+      // the same in-process override the legacy bridge uses. Without it, choosing a
+      // shell in the bottom-terminal section would only reach the model tool after
+      // a restart - the exact divergence the bridge's `shellOverride` exists to kill.
+      if (path.length === 1 && path[0] === "defaultShell" && typeof value === "string") {
+        shellOverride = value;
+      }
+    },
+  });
+  ctx.effect(() => () => browserTerminals.dispose(), "bash-terminal: browser terminal teardown");
+
+  if (process.platform !== "win32") {
+    ctx.logger?.info?.("dsh-bash-terminal-ts: only meaningful on win32; skipping tool registration");
+    return;
   }
+  const backgroundEnabled = true;
+  // R5/R6 and finding F8: an invalid stored value used to throw here, which failed
+  // the whole entry - the tool, the settings row and the browser terminal all
+  // disappeared. The entry now stays mounted, the tool fails closed per call, and
+  // the browser terminal substitutes the floor and says so.
   /** Official sandbox-escalation surface (mirrors tool-bash): advertise the
    * escalation modes whenever the deployment confines. */
   const escalationModes = ESCALATION_TARGETS;
@@ -728,34 +853,20 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // 注册命名空间,复用 perm-gate 自门控(not registered → register → 重试);
   // rc.1+ 命名空间由 loader 占用,该分支自然不命中。GET 带回当前值与可选集。
   // 宿主 context 类型未收录 inject/局部服务形状,compat 桥按宽化面调用。
-  const compatCtx = ctx as unknown as { inject: (deps: string[], fn: (svcCtx: any) => void) => void };
-  compatCtx.inject(["webServer", "settings"], (svcCtx: any) => {
+  const compatCtx = ctx as unknown as { inject?: (deps: string[], fn: (svcCtx: any) => void) => void };
+  if (typeof compatCtx.inject !== "function") {
+    // A context without `inject` (a bare mock, or a host that resolves services
+    // only synchronously) cannot receive the bridge at all. Skipping it must not
+    // take the tool down with it - the tool is what the model calls.
+    ctx.logger?.warn?.("dsh-bash-terminal-ts: ctx.inject unavailable - the settings bridge is not mounted (defaultShell reads still work, writes will not)");
+  } else compatCtx.inject(["webServer", "settings"], (svcCtx: any) => {
     const svc = svcCtx.settings;
     const writeShell = async (value: string): Promise<void> => {
-      if (typeof svc.mutate !== "function") {
-        // 显式降级:该线 settings 服务无 mutate(理论仅最老线),覆盖值仅本进程
-        // 生效;持久化请改 cordis.patch.yml 的 defaultShell。
-        throw new Error(
-          "settings service exposes no mutate on this host line - defaultShell applies for this process only; persist via cordis.patch.yml"
-        );
-      }
+      // One implementation for every config write (the browser terminal's switches
+      // go through the same helper), so the legacy self-registration dance exists
+      // in exactly one place.
+      await persistConfigValue(svc, ["defaultShell"], value);
       shellOverride = value;
-      try {
-        await svc.mutate(ENTRY_ID, [{ op: "set", path: ["defaultShell"], value }]);
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        if (!/not registered/i.test(message) || typeof (svc as Record<string, unknown>).register !== "function") {
-          throw e;
-        }
-        console.warn(`[dsh-bash-terminal-ts] legacy line: registering settings namespace ${ENTRY_ID}`);
-        (svc as { register: (ns: string, schema: unknown, opts?: unknown) => unknown }).register(
-          ENTRY_ID,
-          Config,
-          { base: { defaultShell: value } }
-        );
-        await svc.mutate(ENTRY_ID, [{ op: "set", path: ["defaultShell"], value }]);
-        console.warn("[dsh-bash-terminal-ts] legacy settings namespace registered");
-      }
     };
     svcCtx.effect(
       () => {
@@ -831,7 +942,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // without a restart.
   ctx.on("system-prompt/assemble", async (_assembly, _context, next) => {
     const assembled = await next();
-    const description = toolDescription(backgroundEnabled, currentShell());
+    const description = toolDescription(backgroundEnabled, describedShell());
     const tools = Array.isArray(assembled.tools)
       ? assembled.tools.map((tool) => (tool.name === toolName ? { ...tool, description } : tool))
       : assembled.tools;

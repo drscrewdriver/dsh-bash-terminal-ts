@@ -21,11 +21,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ["scripts/**/*.{js,mjs}"],
+    // Node-run JavaScript: the build scripts and the plain `.mjs` assert scripts under
+    // test/ (this repo's test style is `node test-dist/x.js`, and the browser half runs
+    // as `node test/browser.mjs` against an esbuild kit, so it has no @types/node).
+    files: ["scripts/**/*.{js,mjs}", "test/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },
   {
-    files: ["src/client.tsx", "test/client.ts"],
+    files: ["src/client.tsx", "src/webterminals/browser/**/*.{ts,tsx}", "test/client.ts"],
     plugins: { "react-hooks": reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },
   },
