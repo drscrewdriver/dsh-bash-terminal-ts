@@ -245,14 +245,15 @@ assert.strictEqual(
 );
 assert.strictEqual(typeof enDict["shell.unavailable"], "string", "unavailable fallback copy");
 
-// Four arms, two landing points. The settings live on the bundle detail page and on the
-// family tab; the plugin-item card is the 0.1.2/0.1.5 era-equivalent of the bundle card,
-// and the own-section arm is the fallback for a profile without the family container.
+// Three arms, two landing points: the bundle detail page (plus its 0.1.2/0.1.5
+// era-equivalent, the plugin-item card) and this plugin's own top-level section.
+// The family-tab arm was deleted (2026-10-14): these settings keep a first-class nav
+// row, so they must not depend on another plugin holding the family container.
 const seat = (slot: string) => slotRegistrations.find((entry) => entry.slot === slot);
-assert.ok(seat("dsh-family.tab"), "the family tab seat is injected");
+assert.ok(!seat("dsh-family.tab"), "no family-tab arm left behind");
 assert.ok(seat("plugins.bundle.config"), "the bundle detail card is injected");
 assert.ok(seat("settings.plugin.item"), "the legacy (0.1.2/0.1.5) plugin settings card is injected");
-assert.ok(seat("settings.section"), "the fallback section is injected");
+assert.ok(seat("settings.section"), "the own settings section is injected");
 // The overlay is still registered - but it renders nothing unless the HOST reports that
 // its line has no settings page at all (0.1.0/0.1.1). Deciding at apply time would race
 // the probe, so the gate lives in the component.
@@ -260,20 +261,13 @@ const overlay = seat("shell.overlay");
 assert.ok(overlay, "the last-resort panel is registered on every line");
 const overlayObj = overlay!.fn() as Record<string, unknown>;
 assert.strictEqual(typeof overlayObj.Component, "function", "overlay component passed");
-const family = seat("dsh-family.tab")!;
-const regObj = family.fn() as Record<string, unknown>;
-const Component = regObj.Component;
-assert.strictEqual(regObj.name, "dsh-family.tab");
-assert.strictEqual(regObj.id, "bash-terminal-shell", "the family-tab seat identity is fixed (contract: never rename)");
-assert.strictEqual(typeof regObj.order, "number", "a seat that renders after the shell row");
-assert.strictEqual(regObj.locale, "settings.bash-terminal");
-assert.strictEqual(typeof Component, "function", "row component passed");
-
 // One source of truth: every landing point renders THE SAME component, so a change to
-// the settings body cannot land on one surface and silently miss another.
+// the settings body cannot land on one surface and silently miss another. The bundle
+// card is the reference now that the family arm is gone.
 const bundleCard = seat("plugins.bundle.config")!.fn() as Record<string, unknown>;
+const Component = bundleCard.Component;
+assert.strictEqual(typeof Component, "function", "the settings body is a component");
 assert.strictEqual(bundleCard.key, "dsh-bash-terminal-ts", "the bundle card is keyed by the package name");
-assert.strictEqual(bundleCard.Component, Component, "bundle card and family tab render the same component");
 const pluginCard = seat("settings.plugin.item")!.fn() as Record<string, unknown>;
 assert.strictEqual(pluginCard.key, "settings.bash-terminal", "the legacy card is keyed by the settings namespace");
 assert.strictEqual(pluginCard.Component, Component, "and renders the same component too");
@@ -342,12 +336,12 @@ assert.ok(pickerSource.includes("btPickList"), "the picker draws its own list");
 const css = readFileSync(new URL("../src/client.tsx", import.meta.url), "utf8");
 assert.ok(/\.btPickList\{[^}]*--dsw-alias-bg-overlay/.test(css), "the popup surface uses the host's themed overlay token");
 
-// The priority rule, both directions. Contributing a card to a section that nobody
-// renders would leave the user with no settings at all, so the fallback registers its own
-// top-level section - but ONLY when the family container is absent, and under its own id:
-// shadowing `dsh-family` is the accident the family contract forbids (double nav rows).
-// The decision is taken when the host DECLARES the section (the panel-open event), never
-// at apply time, because the container belongs to another plugin's client.
+// The own-section rule, across the coupling we removed. The section used to stand down
+// while a `dsh-family` row existed (its settings then lived in the family tab); with that
+// arm deleted, the section registers under its OWN id no matter what else is seated - the
+// family container is no longer a dependency, and shadowing `dsh-family` remains the
+// accident the family contract forbids (double nav rows). The decision is still taken when
+// the host DECLARES the section, never at apply time.
 function sectionArms(ledger: { options: { id?: string } }[]): Record<string, unknown>[] {
   const regs: Record<string, unknown>[] = [];
   const mock: ClientTestContext = {
@@ -368,12 +362,14 @@ function sectionArms(ledger: { options: { id?: string } }[]): Record<string, unk
 }
 {
   const withFamily = sectionArms([{ options: { id: "dsh-family" } }]);
-  assert.ok(!withFamily.some((entry) => entry.name === "settings.section"), "no second section while the family container exists");
+  const ownWithFamily = withFamily.find((entry) => entry.name === "settings.section");
+  assert.ok(ownWithFamily, "our section registers even while the family container exists");
+  assert.strictEqual(ownWithFamily!.id, "bash-terminal", "under its own id, never shadowing dsh-family");
 
   const withoutFamily = sectionArms([]);
   const own = withoutFamily.find((entry) => entry.name === "settings.section");
-  assert.ok(own, "the plugin registers its own section when the family container is absent");
-  assert.strictEqual(own!.id, "bash-terminal", "under its own id, never shadowing dsh-family");
+  assert.ok(own, "and the same when it is absent");
+  assert.strictEqual(own!.id, "bash-terminal", "same id either way");
   assert.strictEqual(typeof own!.label, "function", "with a locale-aware label");
   assert.strictEqual(own!.Component, Component, "and the same settings body");
 }

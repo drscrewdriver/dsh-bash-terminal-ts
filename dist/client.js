@@ -7920,7 +7920,6 @@ function SettingsBody() {
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ShellDockSection, {})
   ] });
 }
-var FAMILY_SECTION_ID = "dsh-family";
 var hostSettingsSurface = "unknown";
 function SettingsOverlayEntry() {
   const [open, setOpen] = (0, import_react3.useState)(false);
@@ -7986,29 +7985,10 @@ function apply(ctx) {
       "bash-terminal: legacy plugin settings card"
     );
   });
-  safe("dsh-family.tab", () => {
-    ctx.slots.inject(
-      "dsh-family.tab",
-      () => ctx.slots.register(
-        {
-          name: "dsh-family.tab",
-          id: "bash-terminal-shell",
-          order: 60,
-          label: () => tr("shell.title"),
-          locale: SETTINGS_NS,
-          inject: () => ({})
-        },
-        SettingsBody
-      ),
-      "bash-terminal: settings row"
-    );
-  });
   safe("settings.section", () => {
     ctx.slots.inject(
       "settings.section",
       function* () {
-        const sections = ctx.slots.entries?.("settings.section") ?? [];
-        if (sections.some((entry) => entry.options.id === FAMILY_SECTION_ID)) return;
         yield ctx.slots.register(
           {
             name: "settings.section",
@@ -8021,7 +8001,7 @@ function apply(ctx) {
           SettingsBody
         );
       },
-      "bash-terminal: own section when the family container is absent"
+      "bash-terminal: own settings section"
     );
   });
   safe("shell.overlay", () => {

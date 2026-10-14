@@ -1,8 +1,9 @@
 // dsh-bash-terminal-ts client plugin (compat-legacy): a "Default terminal"
-// preference row plus the bottom-terminal shell section, both contributed to the
-// family settings tab (dsh-family.tab, hosted by dsh-thinking-levels), with a
-// shell.overlay floating-gear fallback for hosts without any settings surface
-// (0.1.0/0.1.1).
+// preference row plus the bottom-terminal shell section, surfaced on the bundle
+// detail card and on this plugin's OWN top-level settings section (it left the
+// dsh-family tab in 2026-10-14 — it keeps a first-class nav row, so it no longer
+// needs the family container), with a shell.overlay floating-gear fallback for
+// hosts without any settings surface (0.1.0/0.1.1).
 //
 // compat-legacy rewiring vs upstream 0.7.1:
 //  - no @deepseek-ai/dsh-client-store / dsh-client-ui-primitives requires:
@@ -446,9 +447,6 @@ function SettingsBody() {
   );
 }
 
-/** The top-level section id dsh-thinking-levels claims when it hosts the family tab. */
-const FAMILY_SECTION_ID = "dsh-family";
-
 /**
  * Whether the host renders a settings page, as the host half reported it (`page` /
  * `none` / `unknown`). Only `none` - 0.1.0 and 0.1.1, which declare the `settings.*` slot
@@ -550,17 +548,20 @@ export function apply(ctx: ClientContext): void {
   });
   // ── settings surfaces ────────────────────────────────────────────────────────
   //
-  // Two landing points, in this order of preference, plus a fallback that keeps the
-  // controls reachable when the first two have no host:
+  // Two landing points plus a fallback that keeps the controls reachable when
+  // neither has a host:
   //
   //   1. the bundle detail page (`plugins.bundle.config`, keyed by the package name) -
   //      the host's own per-plugin configuration card, present on 0.1.7+/0.2.0; on
   //      0.1.2/0.1.5 the era-equivalent dispatch is `settings.plugin.item`, keyed by the
   //      settings namespace, so both are declared;
-  //   2. a tab inside the family section (`dsh-family.tab`, hosted by dsh-thinking-levels);
-  //   3. if NO family container exists, this plugin registers its own top-level
-  //      `settings.section` - contributing a card to a section that is never rendered
-  //      would leave the user with no settings at all.
+  //   2. this plugin's OWN top-level `settings.section` (id `bash-terminal`), registered
+  //      unconditionally. It used to stand down while a `dsh-family` row existed and
+  //      contribute a family tab instead; that coupling made the family container a
+  //      single point of failure for these settings, and the tab is gone now (2026-10-14).
+  //      Registering under our own id — never shadowing `dsh-family` — is what keeps the
+  //      family contract intact: two nav rows, no double-rendered section.
+  //   3. `shell.overlay` for the lines with no settings page at all.
   //
   // Every arm is registered at apply-time top level (registering from inside an inject
   // callback is the two-generation accident this family keeps re-learning), each is
@@ -581,34 +582,14 @@ export function apply(ctx: ClientContext): void {
       "bash-terminal: legacy plugin settings card",
     );
   });
-  safe("dsh-family.tab", () => {
-    ctx.slots.inject(
-      "dsh-family.tab",
-      () =>
-        ctx.slots.register(
-          {
-            name: "dsh-family.tab",
-            id: "bash-terminal-shell",
-            order: 60,
-            label: () => translate("shell.title"),
-            locale: SETTINGS_NS,
-            inject: () => ({}),
-          },
-          SettingsBody,
-        ),
-      "bash-terminal: settings row",
-    );
-  });
   safe("settings.section", () => {
     ctx.slots.inject(
       "settings.section",
       function* () {
-        // Decided at render time, not apply time: the container is registered by another
-        // plugin's client, and the ledger is only settled when the host declares the
-        // section (the contract's "declaration event" - a panel open on 0.1.7 and older,
-        // native on 0.2.0). Probing once at apply would race the bundle order and lose.
-        const sections = ctx.slots.entries?.("settings.section") ?? [];
-        if (sections.some((entry) => entry.options.id === FAMILY_SECTION_ID)) return;
+        // Unconditional since the family tab was dropped: this plugin owns a nav row,
+        // so it must not depend on another plugin's container existing. The register
+        // still happens at the declaration event (the generator runs when the host
+        // declares the slot), which is what kept the old probe honest about bundle order.
         yield ctx.slots.register(
           {
             name: "settings.section",
@@ -621,7 +602,7 @@ export function apply(ctx: ClientContext): void {
           SettingsBody,
         );
       },
-      "bash-terminal: own section when the family container is absent",
+      "bash-terminal: own settings section",
     );
   });
   safe("shell.overlay", () => {
