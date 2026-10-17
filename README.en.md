@@ -10,10 +10,11 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 >
 > | DSH segment | Branch | Plugin series | npm dist-tag |
 > |-------------|--------|---------------|--------------|
-> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (this branch) | 0.7.x | `dsh-0.2.0` |
+> | `0.1.0-rc.2 – 0.2.1-rc.1` (exact 16-version enumeration) | `main` (this branch, cross-version trunk) | 0.8.x | `latest` |
+> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (historical, frozen) | 0.7.x | `dsh-0.2.0` |
 > | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
 > | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5` (historical, frozen) | ≤ 0.5.2 | `dsh-0.1.5` |
-> | 0.1.2-alpha.1 – 0.1.2-rc.x | `main` (historical, frozen) | ≤ 0.4.2 | `dsh-0.1.2` |
+> | 0.1.2-alpha.1 – 0.1.2-rc.x | early `main` commits (frozen at tag) | ≤ 0.4.2 | `dsh-0.1.2` |
 >
 > Pick the line that covers your DSH build; the version series never overlap, so a `^` install cannot resolve across lines.
 

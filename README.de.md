@@ -10,10 +10,11 @@ DSH-Plugin (DeepSeek Harness): ein `shell`-Werkzeug, das unter Windows die Befeh
 >
 > | DSH-Segment | Branch | Plugin-Version | npm-dist-tag |
 > |--------|------|----------|--------------|
-> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (dieser Branch) | 0.7.x | `dsh-0.2.0` |
+> | `0.1.0-rc.2 – 0.2.1-rc.1` (exakte Aufzählung von 16 Versionen) | `main` (dieser Branch, versionsübergreifender Hauptzweig) | 0.8.x | `latest` |
+> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (historisch, eingefroren) | 0.7.x | `dsh-0.2.0` |
 > | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
 > | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5` (historisch, eingefroren) | ≤ 0.5.2 | `dsh-0.1.5` |
-> | 0.1.2-alpha.1 – 0.1.2-rc.x | `main` (historisch, eingefroren) | ≤ 0.4.2 | `dsh-0.1.2` |
+> | 0.1.2-alpha.1 – 0.1.2-rc.x | frühe `main`-Commits (pro Tag eingefroren) | ≤ 0.4.2 | `dsh-0.1.2` |
 >
 > Wählen Sie die Linie passend zu Ihrer DSH-Version; die Versionsserien überlappen nicht, daher kann eine `^`-Installation nie über Linien hinweg auflösen.
 

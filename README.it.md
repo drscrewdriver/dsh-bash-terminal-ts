@@ -10,10 +10,11 @@ Plugin DSH (DeepSeek Harness): uno strumento `shell` che esegue in modo unificat
 >
 > | Segmento DSH | Branch | Versione plugin | dist-tag npm |
 > |--------|------|----------|--------------|
-> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (questo branch) | 0.7.x | `dsh-0.2.0` |
+> | `0.1.0-rc.2 – 0.2.1-rc.1` (enumerazione esatta di 16 versioni) | `main` (questo branch, trunk cross-versione) | 0.8.x | `latest` |
+> | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (storico, congelato) | 0.7.x | `dsh-0.2.0` |
 > | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
 > | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5` (storico, congelata) | ≤ 0.5.2 | `dsh-0.1.5` |
-> | 0.1.2-alpha.1 – 0.1.2-rc.x | `main` (storico, congelata) | ≤ 0.4.2 | `dsh-0.1.2` |
+> | 0.1.2-alpha.1 – 0.1.2-rc.x | primi commit di `main` (congelati al tag) | ≤ 0.4.2 | `dsh-0.1.2` |
 >
 > Scegli la linea corrispondente alla tua versione di DSH; le serie di versioni non si sovrappongono mai, quindi un'installazione con `^` non può risolvere da una linea all'altra.
 
