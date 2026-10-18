@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2 (2026-10-18)
+
+- hosts: 追加 0.2.1-rc.2 声明面枚举（宿主 peer 逐包 npm 实测 rc.2 在版；不触 ctx.web provider 与 model.label 槽，代码零改动，纯元数据发版；农场 rc.2 格挂账待命）
+
 ## 0.8.0 (2026-10-13)
 
 - **浏览器内嵌多 shell 终端**（新能力，`src/webterminals/*`）：底部工作台新增「终端（多 shell）」tab，真 PTY 走 `node-pty` + WS，四种 shell（PowerShell / Git Bash / MSYS2 / WSL bash）可并存。xterm **打进 bundle**而非外部 `require` —— 宿主 client 模块表里没有 `@xterm/xterm`，外部引用会直接 `missed the module table`；`scripts/check-artifacts.mjs` 拿 xterm 自己的 DOM 标记作证人断言已内联，并卡住 bundle 体积上限防第二个重型依赖偷进。
