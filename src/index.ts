@@ -836,7 +836,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     const read = <T>(v: T | VolatileRef<T> | undefined, fallback: T): T =>
       typeof v === "object" && v !== null && typeof (v as VolatileRef<T>).get === "function"
         ? ((v as VolatileRef<T>).get() ?? fallback)
-        : v ?? fallback;
+        : ((v as T | undefined) ?? fallback);
     if (shell === "powershell") return true;
     if (shell === "gitbash") return read(config.shellGitBash as boolean | undefined, true);
     if (shell === "msys2") return read(config.shellMsys2 as boolean | undefined, true);
@@ -926,13 +926,29 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
   // 注册命名空间,复用 perm-gate 自门控(not registered → register → 重试);
   // rc.1+ 命名空间由 loader 占用,该分支自然不命中。GET 带回当前值与可选集。
   // 宿主 context 类型未收录 inject/局部服务形状,compat 桥按宽化面调用。
-  const compatCtx = ctx as unknown as { inject?: (deps: string[], fn: (svcCtx: any) => void) => void };
+  // 窄面型只覆盖本桥用到的三个字段，避免 any 外泄。
+  interface BridgeReq {
+    socket?: { remoteAddress?: string };
+    method?: string;
+    on(event: "data", cb: (chunk: Buffer) => void): void;
+    on(event: "end", cb: () => void): void;
+  }
+  interface BridgeRes {
+    writeHead(status: number, headers: Record<string, string>): void;
+    end(body: string): void;
+  }
+  type BridgeSvcCtx = {
+    settings: unknown;
+    webServer: { register: (route: { kind: string; path: string; handler: (req: BridgeReq, res: BridgeRes) => void }) => () => void };
+    effect: (fn: () => (() => void) | void, label?: string) => void;
+  };
+  const compatCtx = ctx as unknown as { inject?: (deps: string[], fn: (svcCtx: BridgeSvcCtx) => void) => void };
   if (typeof compatCtx.inject !== "function") {
     // A context without `inject` (a bare mock, or a host that resolves services
     // only synchronously) cannot receive the bridge at all. Skipping it must not
     // take the tool down with it - the tool is what the model calls.
     ctx.logger?.warn?.("dsh-bash-terminal-ts: ctx.inject unavailable - the settings bridge is not mounted (defaultShell reads still work, writes will not)");
-  } else compatCtx.inject(["webServer", "settings"], (svcCtx: any) => {
+  } else compatCtx.inject(["webServer", "settings"], (svcCtx: BridgeSvcCtx) => {
     const svc = svcCtx.settings;
     const writeShell = async (value: string): Promise<void> => {
       // One implementation for every config write (the browser terminal's switches
@@ -947,7 +963,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
           (res as { writeHead: (s: number, h: Record<string, string>) => void; end: (b: string) => void }).writeHead(status, { "content-type": "application/json; charset=utf-8" });
           (res as { end: (b: string) => void }).end(JSON.stringify(body));
         };
-        const handler = (req: any, res: any): void => {
+        const handler = (req: BridgeReq, res: BridgeRes): void => {
           const addr = req.socket?.remoteAddress ?? "";
           if (addr !== "127.0.0.1" && addr !== "::1" && addr !== "::ffff:127.0.0.1") {
             json(res, 403, { ok: false, code: "loopback-only" });
@@ -978,7 +994,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
             if (size <= 65536) chunks.push(c);
           });
           req.on("end", () => {
-            let body: { defaultShell?: unknown } = {};
+            let body: { defaultShell?: unknown };
             try {
               body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
             } catch {

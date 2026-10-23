@@ -1,7 +1,7 @@
 {
   "id": "dsh-bash-terminal-ts",
   "name": "dsh-bash-terminal-ts",
-  "version": "0.8.1",
+  "version": "0.8.3",
   "description": {
     "en": "One shell tool that runs commands through PowerShell, Git Bash, MSYS2 or WSL on Windows, plus an embedded terminal for the bottom dock with per-shell activation switches and a default-shell fallback chain.",
     "zh": "一个 shell 工具，可在 Windows 上通过 PowerShell / Git Bash / MSYS2 / WSL 执行命令；另提供底部工作台的内嵌终端，支持按 shell 激活开关与默认 shell 回落链。"

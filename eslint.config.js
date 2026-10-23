@@ -5,7 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["lib/", "dist/", "test-dist/", "node_modules/", "_wt-audit/"] },
+  { ignores: ["lib/", "dist/", "test-dist/", "node_modules/", "_wt-audit/", "_*.mjs"] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {

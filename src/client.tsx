@@ -94,7 +94,7 @@ async function bridgeConfig(): Promise<ConfigSnapshot | null> {
 }
 
 /** The catalog if the terminal routes answered, else null (the old bridge shape). */
-function catalogOf(snapshot: ConfigSnapshot | null): CatalogEntry[] | null {
+function catalogOf(snapshot: ConfigSnapshot | null | undefined): CatalogEntry[] | null {
   if (!Array.isArray(snapshot?.catalog)) return null;
   return snapshot.catalog as CatalogEntry[];
 }

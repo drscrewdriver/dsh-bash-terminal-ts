@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased（预 0.8.3）
+## 0.8.3 (2026-10-24)
 
+- **宿主枚举补 0.2.1-rc.3（17→18 档，engines/全部 peers/dsh.plugin.json/README×7 同串）**：rc.3 契约面零断裂（闸门/settings/vendor/缝/会话 V4 零 diff，仅新增三域 More 菜单行槽），本插件不在其影响面；semver 双向门控命中 rc.3、拒绝未测未来版。**另修正双清单漂移**：`dsh.plugin.json` 版本号自 0.8.2 发布时漏同步（本应随发版同号），现统一为 0.8.3。
 - **预设组去官方工具干扰（同日，分发前裁定；后经用户修订）**：五份模板的宿主官方 `tool-bash` 行**无条件 `disabled: true`**（同名 `bash` 正是本组预设对冲的带内干扰源）。**修订裁定**：`standard-win` 的官方 `tool-pwsh` **恢复挂载**（`disabled: !!js process.platform !== 'win32'`）——win 默认体验就该带沙箱化 PowerShell 面，主入口仍是 `shell` 工具；bash 族四份维持双禁（那里 shell 已接 bash 后端）。persona 的 Shell tool routing 行按两套策略分别措辞（standard-win：pwsh 保留+bash 刻意不挂；bash 族：唯一入口+找不到官方工具是有意为之），模板内注释同步说明策略差异。验证：js-yaml 解析五文件断言全过——过程中踩实 js-yaml v4 两个坑：`new Schema({include:[CORE_SCHEMA实例]})` 会静默丢隐式类型解析把 `true` 解成字符串，正解是实例方法 `yaml.CORE_SCHEMA.extend({explicit:[...]})`；v3 的 `DEFAULT_SAFE_SCHEMA` 在 v4 里是 undefined。
 - **载荷升格独立模块 + 校验形态根因修复**（同日）：桌面插件管理器对 profile 直接依赖的「校验」实为 package.json 的 `engines.dsh`/peers 兼容性判定（rc.2 格源码实锤），非 `dsh.plugin.json` 有无——载荷包无声明故必然红。新独立仓 `posix-runtime-payload`（工作区根）的 pack.mjs 给 0.1.2 包树补齐：与本品同串的 `engines.dsh` 17 档 + 无 entry 的 `dsh.plugin.json`（身份声明不注册任何东西）；同时修掉独立仓首版 trust 文件写成 `digests` 而闸门只读 `files` 的字段契约 bug（digest-mismatch 实踩）。格内验证：0.1.2 装 rc.2 格 → boot 零报错、`verifyPayloadRoot ok:true source:trust`、bash-terminal config 端点正常、smoke 绿。`optionalDependencies` 改钉 0.1.2（发布落库中）；桌面端旧 tgz 路径已被 0.1.2 内容原位覆盖，卡片待用户在管理器里重试/重启应用后转绿。
 - **0.2.1-rc.2 农场格实证（同日补）**：host-farm 新增 0.2.1-rc.2 格（端口 3092，hosts.mjs 保留集增补，rc.1 格暂不收）。踩坑：`farm add` 后依赖行写入但 `dsh.profile.bundles` 未登记（装而不亮），手工 push 后生效；node-pty 被 IGNORED_BUILDS 拦，按 rc.1 配方落 profile `pnpm-workspace.yaml` 的 `allowBuilds` 后重装绿。实证结果：无头目录断言 5 行全对（payload engaged=true，WSL 在场仅 advisory 不否决）；真宿主菜单探针六项全对（bash-terminal.exe/git-bash.exe/msys-bash.exe 在列且 WSL bash 保留，`!!js` 单引号配方在 rc.2 同样成立）；插件 config 端点回新 schema（shells 含 payload，seam 在位）；smoke 绿。**仍未验证**：无 Git Bash 裸机上载荷顶替末位兑底的实机形态。

@@ -6152,7 +6152,7 @@ var zh = {
   "shell.wsl": "WSL",
   "shell.unavailable": "\u8BBE\u7F6E\u9762\u4E0D\u53EF\u7528\uFF1A\u5BBF\u4E3B\u914D\u7F6E\u6865\u672A\u54CD\u5E94\uFF08\u68C0\u67E5\u5BBF\u4E3B\u662F\u5426\u4E3A compat \u7248\uFF09",
   "dock.title": "\u5E95\u90E8\u7EC8\u7AEF",
-  "dock.hint": "\u5F00\u5173\u53EA\u5F71\u54CD\u5E95\u90E8\u5DE5\u4F5C\u53F0\u91CC\u7684\u7EC8\u7AEF\uFF0C\u4E0D\u6539\u53D8\u5B98\u65B9\u53F3\u680F\u7EC8\u7AEF\uFF0C\u4E5F\u4E0D\u7ED9\u6A21\u578B\u65B0\u589E\u80FD\u529B\u3002",
+  "dock.hint": "\u5F00\u5173\u540C\u65F6\u7EA6\u675F\u5E95\u90E8\u7EC8\u7AEF\u4E0E shell \u5DE5\u5177\u7684\u53EF\u9009\u540E\u7AEF\uFF08PowerShell \u4E3A\u4FDD\u5E95\uFF0C\u6052\u53EF\u9009\uFF09\uFF1B\u4E0D\u6539\u53D8\u5B98\u65B9\u53F3\u680F\u7EC8\u7AEF\u3002",
   "dock.state.available": "\u53EF\u7528",
   "dock.state.notInstalled": "\u672A\u63A2\u6D4B\u5230",
   "dock.state.wslPreferred": "\u5DF2\u68C0\u6D4B\u5230 WSL \u53D1\u884C\u7248\uFF08\u4F18\u5148\u7528 WSL bash\uFF09",
@@ -6199,7 +6199,7 @@ var en = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Settings unavailable: the host config bridge did not respond (is the host a compat build?)",
   "dock.title": "Bottom terminal",
-  "dock.hint": "These switches only affect the terminal in the bottom dock. The official right-hand terminal and the model's tools are untouched.",
+  "dock.hint": "These switches gate both the bottom dock terminal and the shell tool's selectable backends (PowerShell is the floor and always available). The official right-hand terminal is untouched.",
   "dock.state.available": "Available",
   "dock.state.notInstalled": "Not found",
   "dock.state.wslPreferred": "WSL distro detected (WSL bash preferred)",
@@ -6246,7 +6246,7 @@ var ja = {
   "shell.wsl": "WSL",
   "shell.unavailable": "\u8A2D\u5B9A\u9762\u3092\u5229\u7528\u3067\u304D\u307E\u305B\u3093\uFF1A\u30DB\u30B9\u30C8\u306E\u8A2D\u5B9A\u30D6\u30EA\u30C3\u30B8\u304C\u5FDC\u7B54\u3057\u307E\u305B\u3093\uFF08compat \u30D3\u30EB\u30C9\u3067\u3059\u304B\uFF1F\uFF09",
   "dock.title": "\u4E0B\u90E8\u30BF\u30FC\u30DF\u30CA\u30EB",
-  "dock.hint": "\u3053\u306E\u30B9\u30A4\u30C3\u30C1\u306F\u4E0B\u90E8\u30C9\u30C3\u30AF\u306E\u30BF\u30FC\u30DF\u30CA\u30EB\u306E\u307F\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002\u516C\u5F0F\u306E\u53F3\u5074\u30BF\u30FC\u30DF\u30CA\u30EB\u3084\u30E2\u30C7\u30EB\u306E\u30C4\u30FC\u30EB\u306F\u5909\u66F4\u3055\u308C\u307E\u305B\u3093\u3002",
+  "dock.hint": "\u3053\u306E\u30B9\u30A4\u30C3\u30C1\u306F\u4E0B\u90E8\u30C9\u30C3\u30AF\u306E\u30BF\u30FC\u30DF\u30CA\u30EB\u3068 shell \u30C4\u30FC\u30EB\u306E\u9078\u629E\u53EF\u80FD\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u306E\u4E21\u65B9\u306B\u5F71\u97FF\u3057\u307E\u3059\uFF08PowerShell \u306F\u6700\u7D42\u4EE3\u66FF\u306E\u305F\u3081\u5E38\u306B\u9078\u629E\u53EF\uFF09\u3002\u516C\u5F0F\u306E\u53F3\u5074\u30BF\u30FC\u30DF\u30CA\u30EB\u306F\u5909\u66F4\u3055\u308C\u307E\u305B\u3093\u3002",
   "dock.state.available": "\u5229\u7528\u53EF",
   "dock.state.notInstalled": "\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
   "dock.state.wslPreferred": "WSL \u30C7\u30A3\u30B9\u30C8\u30EA\u691C\u51FA\u6E08\u307F\uFF08WSL bash \u512A\u5148\uFF09",
@@ -6293,7 +6293,7 @@ var ko = {
   "shell.wsl": "WSL",
   "shell.unavailable": "\uC124\uC815\uBA74\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4: \uD638\uC2A4\uD2B8 \uC124\uC815 \uBE0C\uB9AC\uC9C0\uAC00 \uC751\uB2F5\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4 (compat \uBE4C\uB4DC\uC778\uAC00\uC694?)",
   "dock.title": "\uD558\uB2E8 \uD130\uBBF8\uB110",
-  "dock.hint": "\uC774 \uC2A4\uC704\uCE58\uB294 \uD558\uB2E8 \uB3C5\uC758 \uD130\uBBF8\uB110\uC5D0\uB9CC \uC601\uD5A5\uC744 \uC90D\uB2C8\uB2E4. \uACF5\uC2DD \uC624\uB978\uCABD \uD130\uBBF8\uB110\uACFC \uBAA8\uB378 \uB3C4\uAD6C\uB294 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+  "dock.hint": "\uC774 \uC2A4\uC704\uCE58\uB294 \uD558\uB2E8 \uB3C5 \uD130\uBBF8\uB110\uACFC shell \uB3C4\uAD6C\uC758 \uC120\uD0DD \uAC00\uB2A5 \uBC31\uC5D4\uB4DC \uBAA8\uB450\uC5D0 \uC601\uD5A5\uC744 \uC90D\uB2C8\uB2E4(PowerShell\uC740 \uD56D\uC0C1 \uC120\uD0DD \uAC00\uB2A5). \uACF5\uC2DD \uC624\uB978\uCABD \uD130\uBBF8\uB110\uC740 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
   "dock.state.available": "\uC0AC\uC6A9 \uAC00\uB2A5",
   "dock.state.notInstalled": "\uD0D0\uC9C0\uB418\uC9C0 \uC54A\uC74C",
   "dock.state.wslPreferred": "WSL \uBC30\uD3EC\uD310 \uAC10\uC9C0\uB428 (WSL bash \uC6B0\uC120)",
@@ -6340,7 +6340,7 @@ var fr = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Param\xE8tres indisponibles: le pont de configuration de l'h\xF4te n'a pas r\xE9pondu",
   "dock.title": "Terminal inf\xE9rieur",
-  "dock.hint": "Ces interrupteurs ne concernent que le terminal du dock bas. Le terminal officiel de droite et les outils du mod\xE8le restent inchang\xE9s.",
+  "dock.hint": "Ces interrupteurs r\xE9gissent \xE0 la fois le terminal du dock bas et les backends s\xE9lectionnables de l'outil shell (PowerShell reste toujours disponible). Le terminal officiel de droite reste inchang\xE9.",
   "dock.state.available": "Disponible",
   "dock.state.notInstalled": "Non d\xE9tect\xE9",
   "dock.state.wslPreferred": "Distro WSL d\xE9tect\xE9e (bash WSL pr\xE9f\xE9r\xE9)",
@@ -6387,7 +6387,7 @@ var de = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Einstellungen nicht verf\xFCgbar: Die Konfigurationsbr\xFCcke des Hosts hat nicht geantwortet",
   "dock.title": "Unteres Terminal",
-  "dock.hint": "Diese Schalter betreffen nur das Terminal im unteren Dock. Das offizielle rechte Terminal und die Modellwerkzeuge bleiben unber\xFChrt.",
+  "dock.hint": "Diese Schalter steuern sowohl das Terminal im unteren Dock als auch die w\xE4hlbaren Backends des shell-Werkzeugs (PowerShell bleibt immer verf\xFCgbar). Das offizielle rechte Terminal bleibt unber\xFChrt.",
   "dock.state.available": "Verf\xFCgbar",
   "dock.state.notInstalled": "Nicht gefunden",
   "dock.state.wslPreferred": "WSL-Distro erkannt (WSL bash bevorzugt)",
@@ -6434,7 +6434,7 @@ var it = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Impostazioni non disponibili: il bridge di configurazione dell'host non ha risposto",
   "dock.title": "Terminale inferiore",
-  "dock.hint": "Questi interruttori riguardano solo il terminale nella barra inferiore. Il terminale ufficiale a destra e gli strumenti del modello non cambiano.",
+  "dock.hint": "Questi interruttori controllano sia il terminale nella barra inferiore sia i backend selezionabili dello strumento shell (PowerShell resta sempre disponibile). Il terminale ufficiale a destra non cambia.",
   "dock.state.available": "Disponibile",
   "dock.state.notInstalled": "Non trovato",
   "dock.state.wslPreferred": "Distro WSL rilevata (bash WSL preferito)",
@@ -6481,7 +6481,7 @@ var ru = {
   "shell.wsl": "WSL",
   "shell.unavailable": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B: \u043C\u043E\u0441\u0442 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0445\u043E\u0441\u0442\u0430 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B",
   "dock.title": "\u041D\u0438\u0436\u043D\u0438\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B",
-  "dock.hint": "\u042D\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u0435\u043B\u0438 \u0432\u043B\u0438\u044F\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0432 \u043D\u0438\u0436\u043D\u0435\u0439 \u043F\u0430\u043D\u0435\u043B\u0438. \u041E\u0444\u0438\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u0430\u0432\u044B\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0438 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B \u043C\u043E\u0434\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F.",
+  "dock.hint": "\u042D\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u0435\u043B\u0438 \u0432\u043B\u0438\u044F\u044E\u0442 \u0438 \u043D\u0430 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0432 \u043D\u0438\u0436\u043D\u0435\u0439 \u043F\u0430\u043D\u0435\u043B\u0438, \u0438 \u043D\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u043C\u044B\u0435 \u0431\u044D\u043A\u0435\u043D\u0434\u044B \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u0430 shell (PowerShell \u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0432\u0441\u0435\u0433\u0434\u0430). \u041E\u0444\u0438\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u0430\u0432\u044B\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F.",
   "dock.state.available": "\u0414\u043E\u0441\u0442\u0443\u043F\u0435\u043D",
   "dock.state.notInstalled": "\u041D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D",
   "dock.state.wslPreferred": "\u041E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D \u0434\u0438\u0441\u0442\u0440\u0438\u0431\u0443\u0442\u0438\u0432 WSL (\u043F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435 WSL bash)",
@@ -6528,7 +6528,7 @@ var es = {
   "shell.wsl": "WSL",
   "shell.unavailable": "Configuraci\xF3n no disponible: el puente de configuraci\xF3n del host no respondi\xF3",
   "dock.title": "Terminal inferior",
-  "dock.hint": "Estos interruptores solo afectan al terminal del panel inferior. El terminal oficial derecho y las herramientas del modelo no cambian.",
+  "dock.hint": "Estos interruptores afectan tanto al terminal del panel inferior como a los backends seleccionables de la herramienta shell (PowerShell siempre est\xE1 disponible). El terminal oficial derecho no cambia.",
   "dock.state.available": "Disponible",
   "dock.state.notInstalled": "No detectado",
   "dock.state.wslPreferred": "Distro de WSL detectada (se prefiere bash de WSL)",
@@ -7726,8 +7726,20 @@ function badgeKey(row) {
   if (row.available) return "dock.state.available";
   return row.reason === "no-distro" ? "dock.state.noDistro" : row.reason === "launcher-only" ? "dock.state.launcherOnly" : row.reason === "wsl-preferred" ? "dock.state.wslPreferred" : "dock.state.notInstalled";
 }
+function dropdownRows(snapshot, chosen) {
+  const all = SHELLS.map((id) => ({ id, label: tr("shell." + id) }));
+  const rows = catalogOf(snapshot);
+  if (rows === null) return all;
+  const usable = rows.filter((row) => row.activated && row.available).map((row) => ({ id: row.id, label: tr("shell." + row.id) }));
+  if (chosen.length > 0 && !usable.some((row) => row.id === chosen)) {
+    const extra = all.find((row) => row.id === chosen);
+    if (extra !== void 0) usable.push(extra);
+  }
+  return usable;
+}
 function ShellPreferenceRow({ snapshot }) {
   const [shell, setShell] = (0, import_react3.useState)("powershell");
+  const [snap, setSnap] = (0, import_react3.useState)(snapshot ?? null);
   const [status, setStatus] = (0, import_react3.useState)("loading");
   (0, import_react3.useEffect)(() => {
     let alive = true;
@@ -7736,6 +7748,7 @@ function ShellPreferenceRow({ snapshot }) {
       if (!alive) return;
       if (v && v.defaultShell) {
         setShell(v.defaultShell);
+        setSnap(v);
         setStatus("ready");
       } else {
         setStatus("unavailable");
@@ -7769,7 +7782,7 @@ function ShellPreferenceRow({ snapshot }) {
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       ShellPicker,
       {
-        rows: SHELLS.map((id) => ({ id, label: tr("shell." + id) })),
+        rows: dropdownRows(snap, shell),
         value: shell,
         onChange: (next) => change(next)
       }

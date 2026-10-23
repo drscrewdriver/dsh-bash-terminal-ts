@@ -261,7 +261,9 @@ await assert.rejects(() => reg.execute({ command: "ls", description: "t" }, exec
 // backend the user disabled.
 registered = null;
 apply(ctx, { defaultShell: { get: () => userDefaultShell }, shellGitBash: false } as never);
-const reg2 = registered as ToolDefinition;
+// apply() fills `registered` through the fake register hook; TS cannot see
+// through the indirect assignment, hence the double assertion.
+const reg2 = registered as unknown as ToolDefinition;
 const assemble2 = assembleHandler as (a: PromptAssembly, c: unknown, n: () => Promise<PromptAssembly>) => Promise<PromptAssembly>;
 userDefaultShell = "gitbash";
 await assert.rejects(() => reg2.execute({ command: "ls", description: "t" }, exec), /not activated/);
