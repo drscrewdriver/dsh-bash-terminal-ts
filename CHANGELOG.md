@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased（预 0.8.2）
+## Unreleased（预 0.8.3）
 
 - **预设组去官方工具干扰（同日，分发前裁定；后经用户修订）**：五份模板的宿主官方 `tool-bash` 行**无条件 `disabled: true`**（同名 `bash` 正是本组预设对冲的带内干扰源）。**修订裁定**：`standard-win` 的官方 `tool-pwsh` **恢复挂载**（`disabled: !!js process.platform !== 'win32'`）——win 默认体验就该带沙箱化 PowerShell 面，主入口仍是 `shell` 工具；bash 族四份维持双禁（那里 shell 已接 bash 后端）。persona 的 Shell tool routing 行按两套策略分别措辞（standard-win：pwsh 保留+bash 刻意不挂；bash 族：唯一入口+找不到官方工具是有意为之），模板内注释同步说明策略差异。验证：js-yaml 解析五文件断言全过——过程中踩实 js-yaml v4 两个坑：`new Schema({include:[CORE_SCHEMA实例]})` 会静默丢隐式类型解析把 `true` 解成字符串，正解是实例方法 `yaml.CORE_SCHEMA.extend({explicit:[...]})`；v3 的 `DEFAULT_SAFE_SCHEMA` 在 v4 里是 undefined。
 - **载荷升格独立模块 + 校验形态根因修复**（同日）：桌面插件管理器对 profile 直接依赖的「校验」实为 package.json 的 `engines.dsh`/peers 兼容性判定（rc.2 格源码实锤），非 `dsh.plugin.json` 有无——载荷包无声明故必然红。新独立仓 `posix-runtime-payload`（工作区根）的 pack.mjs 给 0.1.2 包树补齐：与本品同串的 `engines.dsh` 17 档 + 无 entry 的 `dsh.plugin.json`（身份声明不注册任何东西）；同时修掉独立仓首版 trust 文件写成 `digests` 而闸门只读 `files` 的字段契约 bug（digest-mismatch 实踩）。格内验证：0.1.2 装 rc.2 格 → boot 零报错、`verifyPayloadRoot ok:true source:trust`、bash-terminal config 端点正常、smoke 绿。`optionalDependencies` 改钉 0.1.2（发布落库中）；桌面端旧 tgz 路径已被 0.1.2 内容原位覆盖，卡片待用户在管理器里重试/重启应用后转绿。
@@ -13,6 +13,10 @@
 - **bash 族预设错误处理加固**（同日）：分层定为 1 pwsh + 4 bash 族——`standard-win`（pwsh）保持六条陷阱清单，gitbash/msys2/wsl2/payload 四份各补专属错误段：共同「Bash failure discipline」（末位退出码才是判决/`&&` 链失败即停/`2>&1` 合流/引号展开/空结果≠不存在）；MSYS 系三份加「路径静默改写 + MSYS_NO_PATHCONV + CRLF/GBK 坑」；msys2 另加双运行时（/usr/bin 是 msys Build 不产原生 exe，需 /mingw64）；wsl2 换成真 Linux 而（无 MSYS 层、大小写敏感 vs /mnt/c、0777 权限、wslpath、python3-only）；payload 版另锚「缺工具是载荷树缺口，勿现场装系统版补会话」。js-yaml 容 `!!js` 架构解析五文件全过，persona 无 CR 残留。
 - **终端语义预设模板包 `agent-presets/`**（对标型对冲，新 5 模板 + `install-presets.mjs`）：把「默认终端 + 命令语法 + Terminal authority 锚」显式声明在 Agent Preset 层，对冲「安装即改写默认终端语义」类插件；模板去机器化（`%%pythonPath%%` / `%%winPythonWslPath%%` 占位，未填整行删除），同名旧预设**先备份到 `.agent-presets` 挂载根之外**再覆盖；新增 `standard-win-payload` 变体与载荷能力衔接。随包分发（files 加 `agent-presets`），`npm run presets:install`。
 - **验证**：全套七件测试绿（unit 新增载荷判定表 14 断言：未知摘要/漂移/部分信任/WSL 优先/store 发现/槽位末位兜底）；新文件 eslint 干净；`index.ts` 仅剩 5 个存量 `no-explicit-any`/useless-assign 告警均在未改动的 compat 桥行内（diff hunk 可证）。**未验证面**：农场格实机装载与真 PortableGit SFX 反解包（需一台无 Git Bash 的 Windows 格）；发版前需补双 profile 装机冒烟。
+
+## 0.8.2 (2026-10-18)
+
+- hosts: 追加 0.2.1-rc.2 声明面枚举（宿主 peer 逐包 npm 实测 rc.2 在版；不触 ctx.web provider 与 model.label 槽，代码零改动，纯元数据发版；农场 rc.2 格挂账待命）
 
 ## 0.8.0 (2026-10-13)
 
