@@ -23,6 +23,7 @@ const PATHS = {
   gitbash: "C:\\Program Files\\Git\\bin\\bash.exe",
   msys2: "C:\\msys64\\usr\\bin\\bash.exe",
   wsl: "C:\\Windows\\System32\\wsl.exe",
+  payload: "C:\\payloads\\posix-1\\bin\\bash.exe",
 };
 
 /** Facts with everything installed and everything allowed. */
@@ -31,7 +32,7 @@ function facts(overrides: Partial<CatalogFacts> = {}): CatalogFacts {
     paths: PATHS,
     fsProbe: () => true,
     distros: ["Ubuntu"],
-    switches: { gitbash: true, msys2: true, wsl: true },
+    switches: { gitbash: true, msys2: true, wsl: true, payload: false },
     wslDistro: "",
     ...overrides,
   };
@@ -41,7 +42,7 @@ const row = (catalog: ReturnType<typeof buildCatalog>, id: string) => catalog.fi
 
 // ---- catalog ----------------------------------------------------------------
 
-assert.deepStrictEqual(SHELL_PRIORITY, ["powershell", "gitbash", "msys2", "wsl"], "priority order is fixed");
+assert.deepStrictEqual(SHELL_PRIORITY, ["powershell", "gitbash", "msys2", "wsl", "payload"], "priority order is fixed (payload last)");
 
 {
   const catalog = buildCatalog(facts());
@@ -58,8 +59,32 @@ assert.deepStrictEqual(SHELL_PRIORITY, ["powershell", "gitbash", "msys2", "wsl"]
 }
 
 {
+  // The payload row is first-class: declared, badged, and switchable - never a
+  // silent substitution for gitbash. Default switch off = available, not activated.
+  const catalog = buildCatalog(facts());
+  const off = row(catalog, "payload");
+  assert.strictEqual(off.available, true, "a resolved payload path is available even when the switch is off");
+  assert.strictEqual(off.activated, false, "shellPayload defaults off: opt-in twice over");
+  assert.strictEqual(off.togglable, true, "unlike the floor, the payload can be switched both ways");
+  // Switch on: activated with the gitbash interactive rule (-i, no -lc).
+  const on = buildCatalog(facts({ switches: { gitbash: true, msys2: true, wsl: true, payload: true } }));
+  const live = row(on, "payload");
+  assert.strictEqual(live.activated, true);
+  assert.deepStrictEqual([...live.argv!], [PATHS.payload, "-i"], "payload uiArgv");
+  assert.strictEqual(live.label, "POSIX payload", "our namespace carries no bash/msys token");
+  // No payload path + WSL veto: the badge says WHY instead of "not found".
+  const vetoed = buildCatalog(facts({ paths: { ...PATHS, payload: undefined }, payloadSuppressed: true }));
+  const vetoRow = row(vetoed, "payload");
+  assert.strictEqual(vetoRow.available, false);
+  assert.strictEqual(vetoRow.reason, "wsl-preferred", "a detected WSL distro vetoes the payload and the row reports it");
+  // The veto does not fire when the payload actually resolved.
+  const both = buildCatalog(facts({ payloadSuppressed: true }));
+  assert.strictEqual(row(both, "payload").reason, "installed", "suppression only colors an unresolved row");
+}
+
+{
   // A switch off wins over availability: "detected" is not "allowed".
-  const catalog = buildCatalog(facts({ switches: { gitbash: false, msys2: true, wsl: true } }));
+  const catalog = buildCatalog(facts({ switches: { gitbash: false, msys2: true, wsl: true, payload: false } }));
   assert.strictEqual(row(catalog, "gitbash").activated, false, "an explicit off is a real opt-out");
   assert.strictEqual(row(catalog, "gitbash").available, true, "and still reports as installed");
 }
@@ -113,7 +138,7 @@ assert.throws(() => uiArgv("powershell", { ...PATHS, pwsh: undefined }), /unavai
 // ---- resolveDefaultShell (R4/R5/R6) ----------------------------------------
 
 const full = buildCatalog(facts());
-const only = (ids: string[]) => buildCatalog(facts({ switches: { gitbash: ids.includes("gitbash"), msys2: ids.includes("msys2"), wsl: ids.includes("wsl") } }));
+const only = (ids: string[]) => buildCatalog(facts({ switches: { gitbash: ids.includes("gitbash"), msys2: ids.includes("msys2"), wsl: ids.includes("wsl"), payload: ids.includes("payload") } }));
 
 {
   const picked = resolveDefaultShell(full, "gitbash", PATHS);
@@ -141,13 +166,13 @@ const only = (ids: string[]) => buildCatalog(facts({ switches: { gitbash: ids.in
   // Nothing activated at all (R6). The catalog itself still carries powershell as
   // activated - it is the floor - so a fully-populated host never reaches the
   // floor chain below; only a host WITHOUT any powershell executable does.
-  const catalog = buildCatalog(facts({ switches: { gitbash: false, msys2: false, wsl: false } }));
+  const catalog = buildCatalog(facts({ switches: { gitbash: false, msys2: false, wsl: false, payload: false } }));
   const picked = resolveDefaultShell(catalog, "gitbash", PATHS);
   assert.strictEqual(picked.floor, false, "powershell is activated regardless of switches, so this is not the floor path");
   assert.strictEqual(picked.id, "powershell", "and it is what runs");
   assert.deepStrictEqual([...picked.argv], [PATHS.pwsh, "-NoLogo"], "the floor still launches a real PowerShell");
 
-  const noPwsh = buildCatalog(facts({ paths: { ...PATHS, pwsh: undefined }, switches: { gitbash: false, msys2: false, wsl: false } }));
+  const noPwsh = buildCatalog(facts({ paths: { ...PATHS, pwsh: undefined }, switches: { gitbash: false, msys2: false, wsl: false, payload: false } }));
   const fellBack = resolveDefaultShell(noPwsh, "gitbash", { ...PATHS, pwsh: undefined });
   assert.strictEqual(fellBack.floor, true, "with no usable backend the floor is reported");
   assert.match(fellBack.path, /cmd\.exe$/i, "cmd.exe is the last thing that can be typed into");

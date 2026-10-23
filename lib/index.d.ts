@@ -4,7 +4,7 @@ export declare const name = "bash-terminal";
 /** Services required before the tool can register. */
 export declare const inject: string[];
 /** The terminal backends this tool exposes, in catalog order. */
-export declare const SHELLS: readonly ["powershell", "gitbash", "msys2", "wsl"];
+export declare const SHELLS: readonly ["powershell", "gitbash", "msys2", "wsl", "payload"];
 /** The backend used when the caller does not name one. */
 export declare const DEFAULT_SHELL: ShellId;
 /** Static shape of the runtime configuration schema. */
@@ -41,8 +41,29 @@ export interface ConfigValues {
     shellGitBash: boolean;
     shellMsys2: boolean;
     shellWsl: boolean;
+    /**
+     * Activation switch for the payload row in the bottom-terminal UI. Separate
+     * from `enablePosixPayload` (the operator gate that RUNS the digest check at
+     * startup): this one only decides whether a resolved payload may appear in
+     * pickers. Default false - the payload is opt-in twice, provisioning and
+     * activation.
+     */
+    shellPayload: boolean;
     /** WSL distribution for the browser terminal; '' means the WSL default. */
     wslDistro: string;
+    /**
+     * Pinned backup POSIX runtime payload (see src/payload.ts - the artifact is
+     * a Git-for-Windows tree; OUR name avoids the bash/msys tokens by policy).
+     * Default off; enabling it lets a digest-verified payload fill the Git Bash
+     * slot as a LAST-RESORT source when the machine has no system Git Bash. A
+     * detected WSL distro outranks the payload entirely (a real WSL bash is the
+     * better POSIX shell), and an unverifiable payload fails closed - it is
+     * never run, never silently replaced. Resolved at startup, so toggling
+     * takes effect on the next restart.
+     */
+    enablePosixPayload: boolean;
+    /** Explicit payload root or bin/bash.exe path; '' = auto-discovery only. */
+    payloadPosixPath: string;
 }
 /** Runtime configuration schema. */
 export declare const Config: import("./dsh.js").SchemasterySchema;
@@ -74,7 +95,7 @@ export declare function defaultWslPath(env?: NodeJS.ProcessEnv): string;
 /** Executable paths, possibly undefined when a backend is not installed. */
 export type { ResolvedPaths };
 type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath">>;
-export declare function resolveAllPaths(config?: PathConfig, env?: NodeJS.ProcessEnv): ResolvedPaths;
+export declare function resolveAllPaths(config?: PathConfig, env?: NodeJS.ProcessEnv, payloadBash?: string): ResolvedPaths;
 export declare function buildArgv(shell: string, command: string, paths: ResolvedPaths, distro?: string): Array<string | undefined>;
 /**
  * Merge the DSH_* environment over the process environment. For WSL, only

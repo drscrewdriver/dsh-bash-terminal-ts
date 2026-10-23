@@ -6150,6 +6150,8 @@ var zh = {
   "dock.hint": "\u5F00\u5173\u53EA\u5F71\u54CD\u5E95\u90E8\u5DE5\u4F5C\u53F0\u91CC\u7684\u7EC8\u7AEF\uFF0C\u4E0D\u6539\u53D8\u5B98\u65B9\u53F3\u680F\u7EC8\u7AEF\uFF0C\u4E5F\u4E0D\u7ED9\u6A21\u578B\u65B0\u589E\u80FD\u529B\u3002",
   "dock.state.available": "\u53EF\u7528",
   "dock.state.notInstalled": "\u672A\u63A2\u6D4B\u5230",
+  "dock.state.wslPreferred": "\u5DF2\u68C0\u6D4B\u5230 WSL \u53D1\u884C\u7248\uFF08\u4F18\u5148\u7528 WSL bash\uFF09",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "\u65E0\u5DF2\u5B89\u88C5\u53D1\u884C\u7248",
   "dock.state.launcherOnly": "\u53EA\u627E\u5230\u542F\u52A8\u5668\uFF0C\u65E0\u6CD5\u5185\u5D4C",
   "dock.powershell.locked": "PowerShell \u662F\u4FDD\u5E95\u540E\u7AEF\uFF0C\u65E0\u6CD5\u5173\u95ED\u3002",
@@ -6195,6 +6197,8 @@ var en = {
   "dock.hint": "These switches only affect the terminal in the bottom dock. The official right-hand terminal and the model's tools are untouched.",
   "dock.state.available": "Available",
   "dock.state.notInstalled": "Not found",
+  "dock.state.wslPreferred": "WSL distro detected (WSL bash preferred)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "No distro installed",
   "dock.state.launcherOnly": "Only a launcher was found; it cannot be embedded",
   "dock.powershell.locked": "PowerShell is the fallback backend and cannot be turned off.",
@@ -6240,6 +6244,8 @@ var ja = {
   "dock.hint": "\u3053\u306E\u30B9\u30A4\u30C3\u30C1\u306F\u4E0B\u90E8\u30C9\u30C3\u30AF\u306E\u30BF\u30FC\u30DF\u30CA\u30EB\u306E\u307F\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002\u516C\u5F0F\u306E\u53F3\u5074\u30BF\u30FC\u30DF\u30CA\u30EB\u3084\u30E2\u30C7\u30EB\u306E\u30C4\u30FC\u30EB\u306F\u5909\u66F4\u3055\u308C\u307E\u305B\u3093\u3002",
   "dock.state.available": "\u5229\u7528\u53EF",
   "dock.state.notInstalled": "\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
+  "dock.state.wslPreferred": "WSL \u30C7\u30A3\u30B9\u30C8\u30EA\u691C\u51FA\u6E08\u307F\uFF08WSL bash \u512A\u5148\uFF09",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u6E08\u307F\u30C7\u30A3\u30B9\u30C8\u30EA\u30D3\u30E5\u30FC\u30B7\u30E7\u30F3\u306A\u3057",
   "dock.state.launcherOnly": "\u30E9\u30F3\u30C1\u30E3\u30FC\u306E\u307F\u691C\u51FA\u3001\u57CB\u3081\u8FBC\u307F\u4E0D\u53EF",
   "dock.powershell.locked": "PowerShell \u306F\u6700\u5F8C\u306E\u4EE3\u66FF\u306E\u305F\u3081\u7121\u52B9\u5316\u3067\u304D\u307E\u305B\u3093\u3002",
@@ -6285,6 +6291,8 @@ var ko = {
   "dock.hint": "\uC774 \uC2A4\uC704\uCE58\uB294 \uD558\uB2E8 \uB3C5\uC758 \uD130\uBBF8\uB110\uC5D0\uB9CC \uC601\uD5A5\uC744 \uC90D\uB2C8\uB2E4. \uACF5\uC2DD \uC624\uB978\uCABD \uD130\uBBF8\uB110\uACFC \uBAA8\uB378 \uB3C4\uAD6C\uB294 \uBCC0\uACBD\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
   "dock.state.available": "\uC0AC\uC6A9 \uAC00\uB2A5",
   "dock.state.notInstalled": "\uD0D0\uC9C0\uB418\uC9C0 \uC54A\uC74C",
+  "dock.state.wslPreferred": "WSL \uBC30\uD3EC\uD310 \uAC10\uC9C0\uB428 (WSL bash \uC6B0\uC120)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "\uC124\uCE58\uB41C \uBC30\uD3EC\uD310 \uC5C6\uC74C",
   "dock.state.launcherOnly": "\uB7F0\uCC98\uB9CC \uBC1C\uACAC\uB418\uC5B4 \uB0B4\uC7A5\uD560 \uC218 \uC5C6\uC74C",
   "dock.powershell.locked": "PowerShell\uC740 \uCD5C\uC885 \uB300\uCCB4 \uD56D\uBAA9\uC774\uBBC0\uB85C \uB04C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -6330,6 +6338,8 @@ var fr = {
   "dock.hint": "Ces interrupteurs ne concernent que le terminal du dock bas. Le terminal officiel de droite et les outils du mod\xE8le restent inchang\xE9s.",
   "dock.state.available": "Disponible",
   "dock.state.notInstalled": "Non d\xE9tect\xE9",
+  "dock.state.wslPreferred": "Distro WSL d\xE9tect\xE9e (bash WSL pr\xE9f\xE9r\xE9)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "Aucune distribution install\xE9e",
   "dock.state.launcherOnly": "Seuls des lanceurs ont \xE9t\xE9 trouv\xE9s; int\xE9gration impossible",
   "dock.powershell.locked": "PowerShell sert de repli final et ne peut pas \xEAtre d\xE9sactiv\xE9.",
@@ -6375,6 +6385,8 @@ var de = {
   "dock.hint": "Diese Schalter betreffen nur das Terminal im unteren Dock. Das offizielle rechte Terminal und die Modellwerkzeuge bleiben unber\xFChrt.",
   "dock.state.available": "Verf\xFCgbar",
   "dock.state.notInstalled": "Nicht gefunden",
+  "dock.state.wslPreferred": "WSL-Distro erkannt (WSL bash bevorzugt)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "Keine Distribution installiert",
   "dock.state.launcherOnly": "Nur Launcher gefunden; Einbettung nicht m\xF6glich",
   "dock.powershell.locked": "PowerShell ist die letzte R\xFCckfallm\xF6glichkeit und kann nicht deaktiviert werden.",
@@ -6420,6 +6432,8 @@ var it = {
   "dock.hint": "Questi interruttori riguardano solo il terminale nella barra inferiore. Il terminale ufficiale a destra e gli strumenti del modello non cambiano.",
   "dock.state.available": "Disponibile",
   "dock.state.notInstalled": "Non trovato",
+  "dock.state.wslPreferred": "Distro WSL rilevata (bash WSL preferito)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "Nessuna distribuzione installata",
   "dock.state.launcherOnly": "Trovato solo un launcher; incorporamento non possibile",
   "dock.powershell.locked": "PowerShell \xE8 il ripiego finale e non pu\xF2 essere disattivato.",
@@ -6465,6 +6479,8 @@ var ru = {
   "dock.hint": "\u042D\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u0435\u043B\u0438 \u0432\u043B\u0438\u044F\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0432 \u043D\u0438\u0436\u043D\u0435\u0439 \u043F\u0430\u043D\u0435\u043B\u0438. \u041E\u0444\u0438\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u0430\u0432\u044B\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0438 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B \u043C\u043E\u0434\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F.",
   "dock.state.available": "\u0414\u043E\u0441\u0442\u0443\u043F\u0435\u043D",
   "dock.state.notInstalled": "\u041D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D",
+  "dock.state.wslPreferred": "\u041E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D \u0434\u0438\u0441\u0442\u0440\u0438\u0431\u0443\u0442\u0438\u0432 WSL (\u043F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u0435\u0435 WSL bash)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "\u041D\u0435\u0442 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0445 \u0434\u0438\u0441\u0442\u0440\u0438\u0431\u0443\u0442\u0438\u0432\u043E\u0432",
   "dock.state.launcherOnly": "\u041D\u0430\u0439\u0434\u0435\u043D \u0442\u043E\u043B\u044C\u043A\u043E \u043B\u0430\u0443\u043D\u0447\u0435\u0440, \u0432\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u043D\u0438\u0435 \u043D\u0435\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E",
   "dock.powershell.locked": "PowerShell \u2014 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442, \u0435\u0433\u043E \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C.",
@@ -6510,6 +6526,8 @@ var es = {
   "dock.hint": "Estos interruptores solo afectan al terminal del panel inferior. El terminal oficial derecho y las herramientas del modelo no cambian.",
   "dock.state.available": "Disponible",
   "dock.state.notInstalled": "No detectado",
+  "dock.state.wslPreferred": "Distro de WSL detectada (se prefiere bash de WSL)",
+  "shell.payload": "POSIX payload",
   "dock.state.noDistro": "Sin distribuci\xF3n instalada",
   "dock.state.launcherOnly": "Solo se encontr\xF3 un lanzador; no se puede incrustar",
   "dock.powershell.locked": "PowerShell es el respaldo final y no puede desactivarse.",
@@ -7675,7 +7693,7 @@ function MultiShellTerminal(props) {
 // src/client.tsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
 var SETTINGS_NS = "settings.bash-terminal";
-var SHELLS = ["powershell", "gitbash", "msys2", "wsl"];
+var SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload"];
 var ROW_CSS = ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.btRowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.btTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.btDesc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.btSelector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.btSelector:hover{background:var(--dsw-alias-interactive-bg-hover)}.btGear{position:fixed;right:16px;bottom:110px;z-index:10000;width:40px;height:40px;border-radius:50%;border:1px solid rgba(127,127,127,.4);background:rgba(30,30,32,.85);color:inherit;cursor:pointer;font-size:17px;box-shadow:0 4px 16px rgba(0,0,0,.35)}.btOverlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45)}.btPanel{position:fixed;top:6vh;left:50%;transform:translateX(-50%);width:min(760px,92vw);max-height:84vh;overflow-y:auto;z-index:10001;background:var(--dsw-alias-bg-module-platform,rgba(30,30,32,.92));border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.3));border-radius:14px;padding:20px;color:var(--dsw-alias-label-primary)}.btBadge{border-radius:10px;padding:2px 8px;font-size:11px;line-height:16px;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-tertiary);white-space:nowrap}.btBadgeOk{color:var(--dsw-alias-label-primary)}.btNotice{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;padding:8px 0}.btWarn{color:var(--dsw-status-warning-default,#b8860b)}.btRowSwitch{padding-right:0}.btSwitch{width:40px;height:24px;border-radius:12px;border:none;cursor:pointer;background:var(--dsw-alias-bg-module-platform);position:relative;flex:none;transition:background .15s ease;box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l2)}.btSwitch::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--dsw-alias-label-tertiary);transition:transform .15s ease,background .15s ease}.btSwitchOn{background:var(--dsw-alias-interactive-brand,#2f6fed)}.btSwitchOn::after{transform:translateX(16px);background:#fff}.btSwitch:disabled{cursor:not-allowed;opacity:.4}.btSwitch:disabled::after{background:var(--dsw-alias-label-quaternary,#8a8a8a)}.btInput{background:var(--dsw-alias-bg-module-platform);height:32px;border:none;border-radius:8px;color:var(--dsw-alias-label-primary);padding:0 10px;font:inherit;min-width:0;flex:1}.btPick{position:relative;display:inline-block}.btPickBtn{gap:6px}.btPickSm{height:28px;padding:0 10px;border-radius:14px;font-size:12px;line-height:18px}.btPickBtn:disabled{opacity:.4;cursor:not-allowed}.btPickText{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.btPickCaret{color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1}.btPickList{position:absolute;z-index:1000;top:calc(100% + 4px);left:0;min-width:100%;max-height:260px;overflow-y:auto;padding:4px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-overlay);box-shadow:0 8px 24px rgba(0,0,0,.28)}.btPickOpt{padding:6px 10px;font-size:12px;line-height:18px;border-radius:6px;color:var(--dsw-alias-label-primary);cursor:pointer;white-space:nowrap}.btPickOpt:hover{background:var(--dsw-alias-interactive-bg-hover)}.btPickOptOn{color:var(--dsw-alias-interactive-brand);font-weight:600}";
 if (typeof document !== "undefined" && document.querySelector('style[data-plugin-css="bash-terminal-row"]') === null) {
   const tag = document.createElement("style");
@@ -7701,7 +7719,7 @@ function catalogOf(snapshot) {
 function badgeKey(row) {
   if (!row.togglable) return "dock.state.floor";
   if (row.available) return "dock.state.available";
-  return row.reason === "no-distro" ? "dock.state.noDistro" : row.reason === "launcher-only" ? "dock.state.launcherOnly" : "dock.state.notInstalled";
+  return row.reason === "no-distro" ? "dock.state.noDistro" : row.reason === "launcher-only" ? "dock.state.launcherOnly" : row.reason === "wsl-preferred" ? "dock.state.wslPreferred" : "dock.state.notInstalled";
 }
 function ShellPreferenceRow({ snapshot }) {
   const [shell, setShell] = (0, import_react3.useState)("powershell");

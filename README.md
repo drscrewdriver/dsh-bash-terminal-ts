@@ -10,7 +10,7 @@ DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一�
 >
 > | DSH 段 | 分支 | 插件版本 | npm dist-tag |
 > |--------|------|----------|--------------|
-> | `0.1.0-rc.2 – 0.2.1-rc.1`（16 档精确枚举） | `main`（本分支，跨版本主干） | 0.8.x | `latest` |
+> | `0.1.0-rc.2 – 0.2.1-rc.3`（18 档精确枚举） | `main`（本分支，跨版本主干） | 0.8.x | `latest` |
 > | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0`（历史，冻结） | 0.7.x | `dsh-0.2.0` |
 > | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
 > | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5`（历史，冻结） | ≤ 0.5.2 | `dsh-0.1.5` |
@@ -40,6 +40,8 @@ DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一�
 - 通过共享的 `ctx.subprocess` seam 派生进程：进程树终止（Windows `taskkill /T`）、SIGTERM→grace→SIGKILL、输出 spill 文件，与官方 `dsh-tool-bash` / `dsh-tool-pwsh` 行为一致。
 - 后台任务注册进通用 `jobs` registry，支持 `run_in_background` / `job_output` / `job_kill`。
 - 前端设置页的「默认终端」是枚举（UI 自动渲染为下拉），模型每次调用都只按该设置执行，无法自行切换终端。
+- **钉版 POSIX 运行时载荷（第五个一等终端后端，默认关）**：载荷包 `@drscrewdriver/posix-runtime-win32-x64`（命名政策：我们的制品不带 bash/gitbash/msys token；里面是 Git-for-Windows 运行时树）。两层开关：`enablePosixPayload: true`（操作者门，启动时跑摘要校验）+ 设置页里的「POSIX payload」行开关 `shellPayload`（默认关，决定已装载载荷能否进选择器/被选为默认终端）；它有自己的目录行、专属工具描述（bash -lc）、交互终端与 `payload-unconfined` 执法面，**不顶替 Git Bash 槽位**。载荷不随包下载，用 `node scripts/provision-payload.mjs --from <本地 PortableGit SFX>` 自备（反解包 + SHA-256 钉版，自管不取用任何第三方载荷包）；**检测到已装 WSL 发行版时只记一条建议日志**（WSL 里的 bash 通常更好用，拿不准选 `wsl`），不屏蔽载荷行——硬门只有摘要校验一条；校验不过即 fail-closed，绝不裸跑、绝不静默换执行器。详见 `src/payload.ts` 头注释。
+- **终端语义预设模板（`agent-presets/`）**：把「默认终端 + 命令语法 + 终端归属权」显式声明在 Agent Preset 层的可分发模板（PowerShell / Git Bash / MSYS2 / WSL2 / 钉版 POSIX 载荷五变体，含 Terminal authority 锚），用 `npm run presets:install` 装机——对标那些「安装即改写默认终端语义」的插件：同一份 bash-first 体验，由你在预设层自己选，可审计、可复现。
 
 ## 安装（web profile）
 
@@ -119,6 +121,8 @@ node "$env:APPDATA\nvm\<node-version>\node_modules\@deepseek-ai\dsh\lib\bin.js" 
 本插件自带的「终端（多 shell）」tab 不依赖任何东西，四种 shell 开箱即用。但宿主**官方**右栏终端的 shell 菜单是按**可执行文件名**去重的（`discoverShells` 拿 basename 当 Map 键、保留最早一条），而 Git Bash 与 MSYS2 都叫 `bash.exe` —— 二者在官方菜单里最多只能出现一个。
 
 包内 `cordis.patch.yml` 因此给官方终端追加两个**带自己文件名**的候选：`C:\msys64\usr\bin\msys-bash.exe` 和 `C:\Program Files\Git\bin\git-bash.exe`。它们是硬链接（同一 inode，不占空间，删掉即恢复原状），**必须机器上真存在**才有条目；不存在时宿主按候选逐个跳过，菜单与改动前完全一致，不报错。
+
+第三个候选是**钉版 POSIX 载荷**的菜单入口：`%LOCALAPPDATA%\dsh-bash-terminal-ts\payloads\bash-terminal\bin\bash-terminal.exe`（路径由 `!!js` 从 LOCALAPPDATA 拼出，每用户自适应）。它同样是指向载荷 `bin\bash.exe` 的硬链接，但名字故意叫 `bash-terminal.exe` 而不是任何裸 `bash`：官方菜单的 `bash` 键已经属于 WSL 转发器，重名会把 WSL 挤出菜单。链接与稳定 junction 由 `scripts/provision-payload.mjs`（摘要校验通过后才写）或 `node scripts/link-shells.mjs` 自动创建在用户可写的 LOCALAPPDATA 里，**不需要提权**；没装载过载荷的机器上该路径不存在，同样按候选跳过。插件自己的底部终端选择器与官方菜单同口径：WSL 发行版在场只是一条建议日志（「真 WSL bash 通常更好用」），**不屏蔽载荷行**——硬门只有摘要校验一条。
 
 建别名（任选一条路径）：
 

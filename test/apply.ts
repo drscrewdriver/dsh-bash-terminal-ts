@@ -250,4 +250,27 @@ assert.ok(!psAssembly.tools[0].description!.includes("bash -lc"), "stale gitbash
 // Registration-time description already matches the initial setting.
 assert.ok(reg.description.includes("is powershell"), "registration-time description matches initial default");
 
+// ---- activation gate: switches are ONE truth (user decision, 2026-10) ------
+
+// payload requires shellPayload (default off): chosen but off -> fail closed.
+userDefaultShell = "payload";
+await assert.rejects(() => reg.execute({ command: "ls", description: "t" }, exec), /not activated/);
+
+// A second apply with gitbash switched off: execution fails closed AND the
+// model-facing description degrades to the floor instead of promising a
+// backend the user disabled.
+registered = null;
+apply(ctx, { defaultShell: { get: () => userDefaultShell }, shellGitBash: false } as never);
+const reg2 = registered as ToolDefinition;
+const assemble2 = assembleHandler as (a: PromptAssembly, c: unknown, n: () => Promise<PromptAssembly>) => Promise<PromptAssembly>;
+userDefaultShell = "gitbash";
+await assert.rejects(() => reg2.execute({ command: "ls", description: "t" }, exec), /not activated/);
+const offAssembly = await assemble2(makeAssembly(), {}, async () => makeAssembly());
+assert.ok(offAssembly.tools[0].description!.includes("is powershell"), "switched-off backend falls back to the floor in the description");
+// wsl was never switched off (default on): the same apply still runs it.
+userDefaultShell = "wsl";
+spawnCalls.length = 0;
+await reg2.execute({ command: "echo hi", description: "t" }, exec);
+assert.ok(spawnCalls[0].argv[0].toLowerCase().includes("wsl.exe"), "activated backends keep working");
+
 console.log("APPLY/EXECUTE MOCK TESTS PASSED");

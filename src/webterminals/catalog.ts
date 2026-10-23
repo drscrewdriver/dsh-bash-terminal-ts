@@ -68,6 +68,8 @@ export interface CatalogSource {
   paths(): ResolvedPaths;
   switches(): ShellSwitches;
   wslDistro(): string;
+  /** Why the payload row has no path: vetoed by a detected WSL distro. */
+  payloadSuppressed(): boolean;
   /** Cached distro list; undefined means "unknown", [] means "none installed". */
   distros(): readonly string[] | undefined;
 }
@@ -97,6 +99,7 @@ export function createCatalogProvider(source: CatalogSource, now: () => number =
     distros: source.distros(),
     switches: source.switches(),
     wslDistro: source.wslDistro(),
+    payloadSuppressed: source.payloadSuppressed(),
   });
   return {
     catalog: () => {

@@ -16,6 +16,8 @@ export interface CatalogSource {
     paths(): ResolvedPaths;
     switches(): ShellSwitches;
     wslDistro(): string;
+    /** Why the payload row has no path: vetoed by a detected WSL distro. */
+    payloadSuppressed(): boolean;
     /** Cached distro list; undefined means "unknown", [] means "none installed". */
     distros(): readonly string[] | undefined;
 }

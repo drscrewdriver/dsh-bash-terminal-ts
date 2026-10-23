@@ -24,7 +24,7 @@ export default tseslint.config(
     // Node-run JavaScript: the build scripts and the plain `.mjs` assert scripts under
     // test/ (this repo's test style is `node test-dist/x.js`, and the browser half runs
     // as `node test/browser.mjs` against an esbuild kit, so it has no @types/node).
-    files: ["scripts/**/*.{js,mjs}", "test/**/*.mjs"],
+    files: ["scripts/**/*.{js,mjs}", "test/**/*.mjs", "agent-presets/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },
   {

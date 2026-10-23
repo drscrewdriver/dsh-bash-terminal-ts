@@ -1,0 +1,2 @@
+name: 标准模式 (Windows-钉版POSIX载荷)
+description: 功能完整的编码 Agent（Windows 环境，默认终端为插件自备的钉版 POSIX 运行时载荷；装了 WSL 发行版请优先改用 standard-win-wsl2），支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。

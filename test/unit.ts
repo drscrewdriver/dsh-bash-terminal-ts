@@ -1,8 +1,10 @@
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { buildArgv, buildEnv, candidateGitBashPaths, candidateMsys2Paths, candidatePwshPaths, internals } from "../lib/index.js";
 const { renderResult, resolveAllPaths, validateArgs, toolDescription, SHELL_DESCRIPTIONS } = internals;
 import assert from "node:assert";
+import { findPayloadRoots, resolvePayloadBash, verifyPayloadRoot, clearHashCache, TRUST_FILE_NAME } from "../lib/payload.js";
 
 const paths = { pwsh: "C:\\pwsh.exe", gitbash: "C:\\Git\\bin\\bash.exe", msys2: "C:\\msys64\\usr\\bin\\bash.exe", wsl: "C:\\Windows\\System32\\wsl.exe" };
 assert.deepStrictEqual(buildArgv("powershell", "echo hi", paths), ["C:\\pwsh.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "echo hi"]);
@@ -125,7 +127,11 @@ assert.throws(() => validateArgs({ command: "ls", description: "x", timeoutMs: -
 // ---- backend-aware tool description -----------------------------------------
 
 // Every backend is covered by its own lead sentence.
-assert.deepStrictEqual(Object.keys(SHELL_DESCRIPTIONS).sort(), ["gitbash", "msys2", "powershell", "wsl"]);
+assert.deepStrictEqual(Object.keys(SHELL_DESCRIPTIONS).sort(), ["gitbash", "msys2", "payload", "powershell", "wsl"]);
+// The payload backend has its own lead too, and it names the digest gate.
+const payloadDesc = toolDescription(true, "payload");
+assert.ok(payloadDesc.includes("POSIX runtime payload"), "payload lead names the backend: " + payloadDesc);
+assert.ok(payloadDesc.includes("is payload"), "payload names the active backend");
 
 // gitbash -> bash-flavored description; the active backend is named up front.
 const gitDesc = toolDescription(true, "gitbash");
@@ -167,5 +173,120 @@ assert.ok(!toolDescription(false, "gitbash").includes("run_in_background"), "bac
 
 // Unknown backend falls back to the default lead without throwing.
 assert.ok(toolDescription(true, "fish").includes("is powershell"), "unknown backend falls back to default");
+
+// ---- pinned backup bash payload (src/payload.ts) ----------------------------
+// Fake probe: paths are case/backslash normalized like the real fs helpers,
+// stamps carry the content length so a "changed" file re-hashes (the real
+// stamp is size|mtime and the cache must invalidate on both).
+const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+const norm = (p: string) => p.replaceAll("\\", "/").toLowerCase();
+function fakeProbe(files: Record<string, string>, opts: { distros?: readonly string[]; pkgRoot?: string } = {}) {
+  const map = new Map(Object.entries(files).map(([k, v]) => [norm(k), v]));
+  const keys = [...map.keys()];
+  return {
+    // A path exists when it is a known file OR a prefix directory of one.
+    exists: (p: string) => { const n = norm(p); return map.has(n) || keys.some((k) => k.startsWith(n + "/")); },
+    read: (p: string) => { const v = map.get(norm(p)); return v === undefined ? undefined : Buffer.from(v); },
+    stamp: (p: string) => { const v = map.get(norm(p)); return v === undefined ? undefined : `${v.length}|1`; },
+    readdir: (d: string) => {
+      const prefix = norm(d) + "/";
+      const out = new Set<string>();
+      for (const k of map.keys()) if (k.startsWith(prefix)) out.add(k.slice(prefix.length).split("/")[0]!);
+      return [...out];
+    },
+    resolvePackageRoot: () => opts.pkgRoot,
+    wslDistros: () => opts.distros,
+  };
+}
+const ROOT = "C:/payloads/bash-2.56";
+const BASH = `${ROOT}/bin/bash.exe`;
+const DLL = `${ROOT}/usr/bin/msys-2.0.dll`;
+const TRUST = `${ROOT}/${TRUST_FILE_NAME}`;
+const reasonOf = (v: { ok: boolean; reason?: string } | { ok: boolean; bashPath: string }): string =>
+  (v as { reason?: string }).reason ?? "";
+const runtime = { [BASH]: "BASHBIN", [DLL]: "MSYSDLL" };
+
+// No trust file, empty ledger: the digest is UNKNOWN - fail closed, never run.
+clearHashCache();
+assert.ok(!verifyPayloadRoot(ROOT, fakeProbe(runtime) as never).ok, "unpinned payload must not verify");
+assert.ok(reasonOf(verifyPayloadRoot(ROOT, fakeProbe(runtime) as never)).startsWith("digest-unknown"));
+
+// Missing required file: missing-files, also closed.
+const noDll = { [BASH]: "BASHBIN" };
+assert.ok(reasonOf(verifyPayloadRoot(ROOT, fakeProbe(noDll) as never)).startsWith("missing-files"));
+
+// Operator trust file pinning the exact digests: usable, source "trust".
+const trustOk = { ...runtime, [TRUST]: JSON.stringify({
+  schema: 1,
+  files: { "bin/bash.exe": sha("BASHBIN"), "usr/bin/msys-2.0.dll": sha("MSYSDLL") }
+}) };
+clearHashCache();
+const vOk = verifyPayloadRoot(ROOT, fakeProbe(trustOk) as never);
+assert.equal(vOk.ok, true);
+assert.equal((vOk as { source?: string }).source, "trust");
+assert.ok(String((vOk as { bashPath?: string }).bashPath).toLowerCase().endsWith("bash.exe"));
+
+// Drifted binary vs pinned digest: mismatch, closed (this is the tampered /
+// silently-upgraded payload case the whole gate exists for).
+const drifted = { ...runtime, [DLL]: "MSYSDLL2" };
+const trustDrift = { ...drifted, [TRUST]: trustOk[TRUST] };
+clearHashCache();
+assert.ok(reasonOf(verifyPayloadRoot(ROOT, fakeProbe(trustDrift) as never)).startsWith("digest-mismatch"));
+
+// A trust file that does not pin EVERY required file is not an approval.
+const trustPartial = { ...runtime, [TRUST]: JSON.stringify({ files: { "bin/bash.exe": sha("BASHBIN") } }) };
+clearHashCache();
+assert.ok(!verifyPayloadRoot(ROOT, fakeProbe(trustPartial) as never).ok, "partial trust file must not unlock the gate");
+
+// findPayloadRoots: an explicit .../bin/bash.exe maps to its runtime ROOT two levels up.
+const roots = findPayloadRoots({ payloadBashPath: BASH }, fakeProbe(runtime) as never, {});
+assert.ok(roots.some((r) => norm(r) === norm(ROOT)), `explicit bash.exe mapped to root: ${JSON.stringify(roots)}`);
+// The npm package root and store-dir children are discovered too. The store
+// dir is <LOCALAPPDATA>\dsh-bash-terminal-ts\payloads - the fake tree mirrors
+// that full layout, not a bare LOCALAPPDATA.
+const STORE_CHILD = "C:/la/dsh-bash-terminal-ts/payloads/bash-2.56";
+const withStore = {
+  ...runtime, [TRUST]: trustOk[TRUST],
+  [`${STORE_CHILD}/bin/bash.exe`]: "BASHBIN",
+  [`${STORE_CHILD}/usr/bin/msys-2.0.dll`]: "MSYSDLL"
+};
+const r2 = findPayloadRoots({ payloadBashPath: "" }, fakeProbe(withStore, { pkgRoot: "C:/node_modules/x/@drscrewdriver/posix-runtime-win32-x64" }) as never, { LOCALAPPDATA: "C:/la" } as NodeJS.ProcessEnv);
+assert.ok(r2.some((r) => norm(r).includes("posix-runtime-win32-x64")), "package root discovered");
+assert.ok(r2.some((r) => norm(r) === norm(STORE_CHILD)), `store dir child with bin/bash.exe discovered: ${JSON.stringify(r2)}`);
+
+// resolvePayloadBash decision table:
+// (a) WSL distro positively present -> ADVISORY note, but a verified payload
+//     still engages (the official menu lists both; our picker must not be
+//     stricter than the host's).
+clearHashCache();
+const a = resolvePayloadBash({ payloadBashPath: BASH }, fakeProbe(withStore, { distros: ["Ubuntu"] }) as never, {});
+assert.equal(a.engaged, true, "WSL presence is a hint, not a veto");
+assert.ok(a.notes.some((n) => n.includes("WSL distro")), `wsl-preference advisory note: ${JSON.stringify(a.notes)}`);
+assert.ok(a.notes.some((n) => n.includes("hint, not a gate")), "the note says so explicitly");
+// (b) WSL cannot answer (undefined) -> not evidence of absence either way; a
+//     verified root may engage.
+const b = resolvePayloadBash({ payloadBashPath: BASH }, fakeProbe(withStore, { distros: undefined }) as never, {});
+assert.equal(b.engaged, true);
+// (c) no roots at all -> closed with a provisioning hint.
+const c = resolvePayloadBash({ payloadBashPath: "" }, fakeProbe({}, {}) as never, {});
+assert.equal(c.engaged, false);
+assert.ok(c.notes.some((n) => n.includes("no payload root")));
+// (d) root present but unpinned -> closed, NOT silently run.
+const d = resolvePayloadBash({ payloadBashPath: BASH }, fakeProbe(runtime, { distros: [] }) as never, {});
+assert.equal(d.engaged, false);
+assert.ok(d.notes.some((n) => n.includes("digest gate")));
+
+// resolveAllPaths wiring: the payload is its OWN slot - it never substitutes
+// for gitbash (a "Git Bash" row must name a shell the machine actually has),
+// and an explicit config path still wins its own slot.
+const bareEnv = { ProgramFiles: "Z:\\none", SystemRoot: "C:\\Windows", PATH: "", LOCALAPPDATA: "" } as unknown as NodeJS.ProcessEnv;
+const p1 = resolveAllPaths({}, bareEnv, "C:\\payload\\bin\\bash.exe");
+assert.equal(p1.gitbash, undefined, "gitbash stays absent when the machine has no Git Bash");
+assert.equal(p1.payload, "C:\\payload\\bin\\bash.exe", "payload fills its own slot");
+const p2 = resolveAllPaths({ gitBashPath: "C:\\Git\\bin\\bash.exe" }, bareEnv, "C:\\payload\\bin\\bash.exe");
+assert.equal(p2.gitbash, "C:\\Git\\bin\\bash.exe", "an explicit gitbash config keeps its own slot");
+assert.equal(p2.payload, "C:\\payload\\bin\\bash.exe", "and the payload still fills its own");
+assert.equal(buildArgv("payload", "ls", {})[0], undefined, "payload argv without a path yields an undefined executable (caller fails closed)");
+assert.deepEqual(buildArgv("payload", "ls", { payload: "C:\\p\\bin\\bash.exe" }), ["C:\\p\\bin\\bash.exe", "-lc", "ls"]);
 
 console.log("ALL UNIT TESTS PASSED");

@@ -30,6 +30,11 @@ export interface MountInput {
      * service instance only exists here, so it is passed back in.
      */
     persist(svc: unknown, path: readonly string[], value: unknown): Promise<void>;
+    /**
+     * True when the startup payload gate was vetoed by a detected WSL distro
+     * (index.ts owns the answer; the catalog only uses it for the row badge).
+     */
+    payloadSuppressed?(): boolean;
     platform?: NodeJS.Platform;
 }
 /** The mount outcome, reported through the routes' `unavailable` field. */

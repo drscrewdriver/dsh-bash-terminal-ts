@@ -40,6 +40,17 @@
 # file, which Program Files denies a standard user.) Until that link exists the candidate
 # is skipped, so the row is correct either way and the stock candidates stay untouched.
 #
+# The third addition is the pinned POSIX payload's own menu entry, and it is the reason
+# the link is named `bash-terminal.exe` rather than anything containing a bare `bash`:
+# the stock list already spends the `bash` key on the WSL forwarder, and re-using it
+# would DELETE that row from the menu. The path is built from LOCALAPPDATA with `!!js`
+# because the payload store lives per-user, and it points at the STABLE junction
+# (`payloads\bash-terminal`) so re-provisioning a new version does not need a patch
+# edit. Both the link and the junction are created by scripts/provision-payload.mjs /
+# link-shells.mjs only AFTER the digest gate passed, and a machine that never
+# provisioned a payload simply has no file here - skipped per candidate, like the
+# others. See scripts/payload-alias.mjs for the full layout.
+#
 # `shell` is deliberately absent: that means "no explicit default", so the
 # controller uses the execution environment's default shell - the stock
 # behaviour, unchanged.
@@ -51,6 +62,7 @@
 - id: terminal-controller
   config:
     shellCandidates:
+      - !!js '(process.env.LOCALAPPDATA || "") + "\\dsh-bash-terminal-ts\\payloads\\bash-terminal\\bin\\bash-terminal.exe"'
       - 'C:\Program Files\Git\bin\git-bash.exe'
       - 'C:\msys64\usr\bin\msys-bash.exe'
       - zsh

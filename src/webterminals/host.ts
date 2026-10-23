@@ -129,7 +129,7 @@ function num(value: unknown, fallback: number, max: number): number {
  * persist nothing, and look fine in the settings page. Two spellings of one fact
  * always drift, so this table is the single place the name appears.
  */
-const SWITCH_FIELD: Record<string, string> = { gitbash: "shellGitBash", msys2: "shellMsys2", wsl: "shellWsl" };
+const SWITCH_FIELD: Record<string, string> = { gitbash: "shellGitBash", msys2: "shellMsys2", wsl: "shellWsl", payload: "shellPayload" };
 
 /**
  * Register the terminal routes.
@@ -237,7 +237,7 @@ async function dispatch(body: RequestBody, deps: UiBridgeDeps): Promise<unknown>
       const next = requested as Record<string, unknown>;
       // Persist first, then answer with a rebuilt catalog: a switch that cannot be
       // stored must not look applied in the settings row.
-      for (const key of ["gitbash", "msys2", "wsl"] as const) {
+      for (const key of ["gitbash", "msys2", "wsl", "payload"] as const) {
         if (typeof next[key] === "boolean") await deps.writeConfig([SWITCH_FIELD[key]!], next[key]);
       }
       if (typeof body.wslDistro === "string") await deps.writeConfig(["wslDistro"], body.wslDistro);

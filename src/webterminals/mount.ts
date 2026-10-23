@@ -76,6 +76,11 @@ export interface MountInput {
    * service instance only exists here, so it is passed back in.
    */
   persist(svc: unknown, path: readonly string[], value: unknown): Promise<void>;
+  /**
+   * True when the startup payload gate was vetoed by a detected WSL distro
+   * (index.ts owns the answer; the catalog only uses it for the row badge).
+   */
+  payloadSuppressed?(): boolean;
   platform?: NodeJS.Platform;
 }
 
@@ -114,6 +119,9 @@ export function mountBrowserTerminals(input: MountInput): BrowserTerminalMount {
     gitbash: readField("shellGitBash", true),
     msys2: readField("shellMsys2", true),
     wsl: readField("shellWsl", true),
+    // Opt-in twice over: enablePosixPayload provisions the runtime, this
+    // switch decides whether a provisioned payload may show in pickers.
+    payload: readField("shellPayload", false),
   });
   const wslDistro = (): string => readField("wslDistro", "").trim();
   /** The master switch: off hides the child switches and refuses allocations. */
@@ -148,6 +156,7 @@ export function mountBrowserTerminals(input: MountInput): BrowserTerminalMount {
     paths: () => input.paths,
     switches,
     wslDistro,
+    payloadSuppressed: input.payloadSuppressed ?? (() => false),
     distros: () => {
       if (distros === undefined && !probing) reprobe();
       return distros;

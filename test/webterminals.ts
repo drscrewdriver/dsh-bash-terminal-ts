@@ -180,10 +180,10 @@ async function ask(server: ReturnType<typeof fakeServer>, body: Record<string, u
 }
 
 /** The switch set every harness case starts from. */
-const ALL_ON = { gitbash: true, msys2: true, wsl: true };
+const ALL_ON = { gitbash: true, msys2: true, wsl: true, payload: false };
 
-async function harness(options: { loopback?: boolean; unavailable?: string; switches?: { gitbash: boolean; msys2: boolean; wsl: boolean }; enabled?: boolean; shim?: boolean } = {}) {
-  const switches = options.switches ?? ALL_ON;
+async function harness(options: { loopback?: boolean; unavailable?: string; switches?: { gitbash: boolean; msys2: boolean; wsl: boolean; payload?: boolean }; enabled?: boolean; shim?: boolean } = {}) {
+  const switches = { payload: false, ...(options.switches ?? ALL_ON) };
   const enabledState = options.enabled ?? true;
   let shimState = options.shim ?? false;
   const server = fakeServer(options.loopback ?? true);
@@ -231,7 +231,7 @@ async function harness(options: { loopback?: boolean; unavailable?: string; swit
   const got = await ask(h.server, { op: "get" });
   assert.strictEqual(got.status, 200);
   const value = got.json.value as Record<string, unknown>;
-  assert.strictEqual((value.catalog as unknown[]).length, 4, "the catalog is served");
+  assert.strictEqual((value.catalog as unknown[]).length, 5, "the catalog is served (payload row included)");
   assert.strictEqual((value.effective as { id: string }).id, "gitbash", "the effective shell is computed host-side");
 
   const opened = await ask(h.server, { op: "terminal.open", sessionId: "s1", cols: 100, rows: 30 });
@@ -299,6 +299,16 @@ async function harness(options: { loopback?: boolean; unavailable?: string; swit
   assert.deepStrictEqual(h.writes, [{ path: ["shellWsl"], value: false }], "and persists through the shared config writer");
   const unknown = await ask(h.server, { op: "nope" });
   assert.strictEqual(unknown.status, 404, "an unknown op is a 404, not a silent 200");
+}
+
+{
+  // The payload row's switch writes through the same table (shellPayload) -
+  // without it the settings toggle could not persist and the shell tool's
+  // activation gate would never see the user's choice.
+  const h = await harness();
+  const r = await ask(h.server, { op: "switches", switches: { payload: true } });
+  assert.strictEqual(r.status, 200, "the payload switch is accepted");
+  assert.deepStrictEqual(h.writes, [{ path: ["shellPayload"], value: true }], "and persists to shellPayload");
 }
 
 {

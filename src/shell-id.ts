@@ -7,5 +7,5 @@
 // in both tsconfig graphs without dragging `@types/node` into the client purity
 // gate.
 
-/** The four backends, in catalog order. */
-export type ShellId = "powershell" | "gitbash" | "msys2" | "wsl";
+/** The five backends, in catalog order (`payload` = the pinned POSIX runtime). */
+export type ShellId = "powershell" | "gitbash" | "msys2" | "wsl" | "payload";

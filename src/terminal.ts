@@ -80,6 +80,7 @@ export function terminalArgv(
   switch (shell) {
     case "powershell": return [paths.pwsh, "-NoLogo", "-NoProfile"];
     case "gitbash": return [paths.gitbash, "-i"];
+    case "payload": return [paths.payload, "-i"];
     case "msys2":
       // -l, NOT -lc: this argv carries no command (the PTY itself is the
       // session), and `bash -lc` with no operand dies immediately with

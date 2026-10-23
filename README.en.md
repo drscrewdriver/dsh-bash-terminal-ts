@@ -10,7 +10,7 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 >
 > | DSH segment | Branch | Plugin series | npm dist-tag |
 > |-------------|--------|---------------|--------------|
-> | `0.1.0-rc.2 – 0.2.1-rc.1` (exact 16-version enumeration) | `main` (this branch, cross-version trunk) | 0.8.x | `latest` |
+> | `0.1.0-rc.2 – 0.2.1-rc.3` (exact 18-version enumeration) | `main` (this branch, cross-version trunk) | 0.8.x | `latest` |
 > | `>=0.2.0-rc.1 <0.2.1-0` | `compat/0.2.0` (historical, frozen) | 0.7.x | `dsh-0.2.0` |
 > | 0.1.7-rc.1 – 0.1.7.x | `compat/0.1.7` | 0.6.x | `dsh-0.1.7` |
 > | 0.1.5-alpha.1 – 0.1.5-rc.x | `ts/0.1.5` (historical, frozen) | ≤ 0.5.2 | `dsh-0.1.5` |
@@ -31,6 +31,8 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 - **Official sandbox seam**: the `shell` tool resolves the DSH sandbox policy per call and confines PowerShell argv through `ctx.sandbox` — same fail-closed `SandboxUnavailableError` semantics as the shipped executors. Git Bash, MSYS2 and WSL run unconfined: WSL is its own Linux VM, while Git Bash and MSYS2 cannot run under the DSH Windows ACL restricted-token runner (Cygwin/MSYS2 aborts with `CreateFileMapping` Win32 error 5). Official `sandbox_permissions` / `justification` escalation and denial markers included.
 - **Interactive terminal**: the `terminal` tool opens persistent real-PTY sessions over node-pty — on non-Windows via the official `ctx.subprocess.spawnTerminal` seam, on Windows directly through node-pty because the upstream seam's process inspector is POSIX-only. Actions `open` / `send` / `read` / `signal` / `close`; shell state persists across calls; sessions are managed as background jobs and auto-close when idle.
 - **Background execution** via the generic jobs registry (`run_in_background` / `job_output` / `job_kill`).
+- **Pinned POSIX runtime payload (a first-class fifth backend, off by default)**: package `@drscrewdriver/posix-runtime-win32-x64` (naming policy: our artifact names never carry bash/gitbash/msys tokens - the tree inside is Git-for-Windows). Two opt-in layers: `enablePosixPayload: true` (operator gate - runs the digest check at startup) plus a "POSIX payload" row switch `shellPayload` in Settings (default off - decides whether a provisioned payload may enter pickers or be chosen as the default terminal). It has its own catalog row, tool description (`bash -lc`), interactive terminal and `payload-unconfined` enforcement facts - it never substitutes for the Git Bash slot. Nothing is downloaded at install - provision it yourself from a LOCAL PortableGit SFX (`node scripts/provision-payload.mjs --from <sfx>`: reverse-unpack, SHA-256 pin, fully self-managed; no third-party payload packages are consumed). A detected WSL distro logs an advisory hint (a real WSL bash is usually the better shell) but does not hide the payload row - the digest gate is the only hard no, and a payload that fails it is never run, never silently replaced.
+- **Terminal-semantics preset templates (`agent-presets/`)**: distributable Agent Presets that declare default terminal, command syntax and a "Terminal authority" anchor at the preset layer (PowerShell / Git Bash / MSYS2 / WSL2 / pinned-payload variants), installed via `npm run presets:install` - the benchmark-style hedge against plugins that rewrite default-terminal semantics at install time: the same bash-first experience, chosen by you in a layer that is auditable and reproducible.
 
 ## Screenshots
 
@@ -76,6 +78,8 @@ For local development (junction install, source changes apply instantly) see the
 This plugin's own “Terminal (multi-shell)” tab needs nothing extra — all four shells work out of the box. The **host's** official right-sidebar terminal is a different story: its menu is built by `discoverShells`, which keys a Map by the executable **file name** and keeps the earliest entry, and both Git Bash and MSYS2 ship as `bash.exe`. At most one of them can ever appear there.
 
 The bundled `cordis.patch.yml` therefore adds two candidates that carry a file name of their own: `C:\msys64\usr\bin\msys-bash.exe` and `C:\Program Files\Git\bin\git-bash.exe`. Both are hard links (same inode, no extra space, delete them to revert), and they only produce a menu entry if they actually exist on the machine. A missing link is skipped per candidate, so the menu stays exactly as it was and nothing fails.
+
+A third candidate is the pinned POSIX payload's menu entry: `%LOCALAPPDATA%\dsh-bash-terminal-ts\payloads\bash-terminal\bin\bash-terminal.exe` (the path is built from LOCALAPPDATA via `!!js`, so it adapts per user). It is also a hard link into the payload's `bin\`, deliberately named `bash-terminal.exe` - the menu's `bash` key already belongs to the WSL forwarder, and re-using it would push WSL out. The link and the stable junction are created automatically by `scripts/provision-payload.mjs` (only after the digest gate passes) or `node scripts/link-shells.mjs`, inside the user-writable LOCALAPPDATA - no elevation needed. Machines that never provisioned a payload simply have no file there and the candidate is skipped.
 
 Create the aliases (either route):
 
@@ -192,7 +196,7 @@ Details, the argv/env table and the measured smoke output are in `README.md` (Ch
 
 ## Config
 
-Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `gitBashPath`, `msys2Path`, `wslPath`, plus the bottom-terminal fields `shellGitBash`, `shellMsys2`, `shellWsl`, `wslDistro`.
+Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `gitBashPath`, `msys2Path`, `wslPath`, plus the bottom-terminal fields `shellGitBash`, `shellMsys2`, `shellWsl`, `shellPayload`, `wslDistro`, and the payload fields `enablePosixPayload`, `payloadPosixPath` (restart to apply).
 
 ## Uninstall
 

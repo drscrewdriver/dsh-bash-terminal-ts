@@ -52,6 +52,7 @@ import type {
   ToolRunContext
 } from "./dsh-types.js";
 import { createTerminalRegistry, terminalTool } from "./terminal.js";
+import { resolvePayloadBash } from "./payload.js";
 
 /** Stable Cordis plugin name. */
 export const name = "bash-terminal";
@@ -61,7 +62,7 @@ const ENTRY_ID = "tool-bash-terminal";
 export const inject = ["tools", "systemPrompt", "shellEnv", "subprocess", "settings", "sandbox", "sandboxPolicy"];
 
 /** The terminal backends this tool exposes, in catalog order. */
-export const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
+export const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload"] as const;
 /** The backend used when the caller does not name one. */
 export const DEFAULT_SHELL: ShellId = "powershell";
 /** Default per-command timeout (ms). */
@@ -124,8 +125,29 @@ export interface ConfigValues {
   shellGitBash: boolean;
   shellMsys2: boolean;
   shellWsl: boolean;
+  /**
+   * Activation switch for the payload row in the bottom-terminal UI. Separate
+   * from `enablePosixPayload` (the operator gate that RUNS the digest check at
+   * startup): this one only decides whether a resolved payload may appear in
+   * pickers. Default false - the payload is opt-in twice, provisioning and
+   * activation.
+   */
+  shellPayload: boolean;
   /** WSL distribution for the browser terminal; '' means the WSL default. */
   wslDistro: string;
+  /**
+   * Pinned backup POSIX runtime payload (see src/payload.ts - the artifact is
+   * a Git-for-Windows tree; OUR name avoids the bash/msys tokens by policy).
+   * Default off; enabling it lets a digest-verified payload fill the Git Bash
+   * slot as a LAST-RESORT source when the machine has no system Git Bash. A
+   * detected WSL distro outranks the payload entirely (a real WSL bash is the
+   * better POSIX shell), and an unverifiable payload fails closed - it is
+   * never run, never silently replaced. Resolved at startup, so toggling
+   * takes effect on the next restart.
+   */
+  enablePosixPayload: boolean;
+  /** Explicit payload root or bin/bash.exe path; '' = auto-discovery only. */
+  payloadPosixPath: string;
 }
 
 /** Runtime configuration schema. */
@@ -145,7 +167,12 @@ export const Config = z.object({
   shellGitBash: z.boolean().default(true).volatile(),
   shellMsys2: z.boolean().default(true).volatile(),
   shellWsl: z.boolean().default(true).volatile(),
-  wslDistro: z.string().default("").volatile()
+  shellPayload: z.boolean().default(false).volatile(),
+  wslDistro: z.string().default("").volatile(),
+  // Payload gate state is read once per process (paths resolve at startup), so
+  // these are deliberately NOT volatile: a flip needs the restart it implies.
+  enablePosixPayload: z.boolean().default(false),
+  payloadPosixPath: z.string().default("")
 });
 
 // ---- executable resolution ------------------------------------------------
@@ -244,7 +271,11 @@ export type { ResolvedPaths };
 
 type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath">>;
 
-export function resolveAllPaths(config: PathConfig = {}, env: NodeJS.ProcessEnv = process.env): ResolvedPaths {
+export function resolveAllPaths(
+  config: PathConfig = {},
+  env: NodeJS.ProcessEnv = process.env,
+  payloadBash?: string
+): ResolvedPaths {
   const pwsh = config.pwshPath && config.pwshPath.trim().length > 0
     ? config.pwshPath
     : resolveFromCandidates(candidatePwshPaths(env));
@@ -257,7 +288,10 @@ export function resolveAllPaths(config: PathConfig = {}, env: NodeJS.ProcessEnv 
   const wsl = config.wslPath && config.wslPath.trim().length > 0
     ? config.wslPath
     : defaultWslPath(env);
-  return { pwsh, gitbash, msys2, wsl };
+  // The payload is its OWN backend (first-class catalog row) - it never
+  // silently substitutes for the gitbash slot, so a row labelled "Git Bash"
+  // always names a shell the machine actually has.
+  return { pwsh, gitbash, msys2, wsl, ...(payloadBash !== undefined ? { payload: payloadBash } : {}) };
 }
 
 // ---- argv / env construction ------------------------------------------------
@@ -278,6 +312,10 @@ export function buildArgv(
       // /usr/bin and /mingw64/bin on PATH. With a bare -c, `tr`, `sed`, `gcc`
       // and friends are all "command not found".
       return [paths.msys2, "-lc", command];
+    case "payload":
+      // Same login-shell rule as msys2/gitbash: the payload is a
+      // Git-for-Windows tree and `-lc` is what gives it a usable PATH.
+      return [paths.payload, "-lc", command];
     case "wsl": {
       const distroArg = distro !== undefined && distro.trim().length > 0 ? ["-d", distro.trim()] : [];
       return [paths.wsl, ...distroArg, "-e", "bash", "-lc", command];
@@ -570,7 +608,8 @@ export const SHELL_DESCRIPTIONS: Record<ShellId, string> = {
   powershell: "Execute a PowerShell command (pwsh -NoLogo -NoProfile -NonInteractive -Command <command>) and return its stdout/stderr. PowerShell syntax; native Windows paths (C:\\...); environment variables via $env:NAME.",
   gitbash: "Execute a bash command (Git for Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /d/WorkSpace; PATH includes /usr/bin and /mingw64/bin so git, npm, ssh etc. work; environment variables via $NAME.",
   msys2: "Execute a bash command (MSYS2 bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin and /mingw64/bin so git, npm, gcc, make etc. work; environment variables via $NAME. MSYS2 provides a full GCC/mingw64 toolchain.",
-  wsl: "Execute a Linux bash command (wsl [-d <distro>] -e bash -lc <command>) and return its stdout/stderr. Linux syntax; Windows files under /mnt/d/...; environment variables via $NAME."
+  wsl: "Execute a Linux bash command (wsl [-d <distro>] -e bash -lc <command>) and return its stdout/stderr. Linux syntax; Windows files under /mnt/d/...; environment variables via $NAME.",
+  payload: "Execute a bash command in the plugin's pinned POSIX runtime payload (a digest-verified Git-for-Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin so git, npm, ssh etc. work; environment variables via $NAME. Use it only when the user has deliberately enabled the payload backend."
 };
 
 /**
@@ -586,7 +625,7 @@ export function toolDescription(backgroundEnabled: boolean, shell: string = DEFA
   const base = [
     `The user's chosen default terminal (Settings -> General -> Default terminal) is ${active}; commands run there.`,
     lead,
-    "Each call spawns a fresh shell: no state (cwd, variables, aliases) persists between calls - pass workdir instead of using cd. Non-zero exits are reported as [exit code: N] markers; investigate failures before moving on. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Commands run under the DSH sandbox: confined modes (read-only / workspace-write) are enforced through ctx.sandbox and deny fail-closed for PowerShell; danger-full-access, Git Bash, MSYS2, and WSL run unconfined."
+    "Each call spawns a fresh shell: no state (cwd, variables, aliases) persists between calls - pass workdir instead of using cd. Non-zero exits are reported as [exit code: N] markers; investigate failures before moving on. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Commands run under the DSH sandbox: confined modes (read-only / workspace-write) are enforced through ctx.sandbox and deny fail-closed for PowerShell; danger-full-access, Git Bash, MSYS2, the pinned POSIX payload, and WSL run unconfined."
   ].join(" ");
   if (!backgroundEnabled) return base;
   return base + " Set run_in_background: true for long-running commands: the call returns a job id immediately; read its output with job_output and stop it with job_kill. No timeout applies to background runs.";
@@ -637,14 +676,18 @@ function confineSpawn(
   policy: SandboxPolicy,
   shell: string
 ): { argv: string[]; sandbox?: SandboxFacts } {
-  if (policy.mode === "danger-full-access" || shell === "wsl" || shell === "gitbash" || shell === "msys2") {
+  if (policy.mode === "danger-full-access" || shell === "wsl" || shell === "gitbash" || shell === "msys2" || shell === "payload") {
     const sandbox = shell === "wsl"
       ? { mode: policy.mode, enforcement: "wsl-isolation" }
       : shell === "gitbash"
         ? { mode: policy.mode, enforcement: "gitbash-unconfined" }
         : shell === "msys2"
           ? { mode: policy.mode, enforcement: "msys2-unconfined" }
-          : undefined;
+          : shell === "payload"
+            // The payload cannot be confined either (same Cygwin/MSYS runtime
+            // constraint as Git Bash) - its safety layer is the digest gate.
+            ? { mode: policy.mode, enforcement: "payload-unconfined" }
+            : undefined;
     return { argv, sandbox };
   }
   const confined = ctx.sandbox.confine(argv, policy);
@@ -747,7 +790,18 @@ export async function persistConfigValue(svc: unknown, path: readonly string[], 
 // ---- plugin -------------------------------------------------------------------
 
 export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = {}): void {
-  const paths = resolveAllPaths(config);
+  // Pinned backup POSIX runtime payload: opt-in, its OWN backend slot. A
+  // detected WSL distro is an advisory note only (the official menu lists both
+  // side by side, so our picker must not be stricter); the digest gate is the
+  // only hard no: an unverified payload simply does not run.
+  let payloadBash: string | undefined;
+  const payloadSuppressed = false;
+  if (config.enablePosixPayload === true && process.platform === "win32") {
+    const outcome = resolvePayloadBash({ payloadBashPath: config.payloadPosixPath ?? "" });
+    if (outcome.engaged) payloadBash = outcome.bashPath;
+    for (const note of outcome.notes) ctx.logger?.warn?.(`dsh-bash-terminal-ts: ${note}`);
+  }
+  const paths = resolveAllPaths(config, process.env, payloadBash);
   // 0.1.7: `defaultShell` is a `.volatile()` config field — the loader hands
   // `apply` a live ref and the latest value is resolved on every read; there
   // is no settings registration call anymore (removed with the 0.1.7 host).
@@ -773,16 +827,34 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
    */
   const currentShell = storedShell;
   /**
+   * The activation switches are ONE truth: a switch off hides the backend from
+   * the dock AND makes it an invalid shell-tool target (powershell is the
+   * floor and always on). A stored defaultShell pointing at a switched-off
+   * backend is therefore stale, not executable.
+   */
+  const switchOn = (shell: string): boolean => {
+    const read = <T>(v: T | VolatileRef<T> | undefined, fallback: T): T =>
+      typeof v === "object" && v !== null && typeof (v as VolatileRef<T>).get === "function"
+        ? ((v as VolatileRef<T>).get() ?? fallback)
+        : v ?? fallback;
+    if (shell === "powershell") return true;
+    if (shell === "gitbash") return read(config.shellGitBash as boolean | undefined, true);
+    if (shell === "msys2") return read(config.shellMsys2 as boolean | undefined, true);
+    if (shell === "wsl") return read(config.shellWsl as boolean | undefined, true);
+    if (shell === "payload") return read(config.shellPayload as boolean | undefined, false);
+    return false;
+  };
+  /**
    * What the model is TOLD. Sanitised, because this one runs on every prompt
    * assembly: an invalid stored value must not break the whole prompt, and naming
    * the floor is honest about what a successful call would use.
    */
   const describedShell = (): string => {
     const stored = storedShell();
-    if ((SHELLS as readonly string[]).includes(stored)) return stored;
+    if ((SHELLS as readonly string[]).includes(stored) && switchOn(stored)) return stored;
     if (!warnedStale) {
       warnedStale = true;
-      ctx.logger?.warn?.(`dsh-bash-terminal-ts: defaultShell ${JSON.stringify(stored)} is not a selectable backend; shell calls will fail closed and the bottom terminal falls back to ${DEFAULT_SHELL}`);
+      ctx.logger?.warn?.(`dsh-bash-terminal-ts: defaultShell ${JSON.stringify(stored)} is not a selectable/activated backend; shell calls will fail closed and the bottom terminal falls back to ${DEFAULT_SHELL}`);
     }
     return DEFAULT_SHELL;
   };
@@ -797,6 +869,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     config: config as Record<string, unknown>,
     paths,
     configuredShell: storedShell,
+    payloadSuppressed: () => payloadSuppressed,
     persist: async (svc, path, value) => {
       await persistConfigValue(svc, path, value);
       // ≤0.1.6 hosts have no config hot-reload, so mirror a defaultShell write into
@@ -933,7 +1006,16 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
 
   const toolName = "shell";
   const terminalRegistry = createTerminalRegistry(ctx);
-  ctx.tools.register(terminalTool(ctx, terminalRegistry, paths, () => currentShell()));
+  // The interactive terminal obeys the SAME activation gate as the shell tool:
+  // the getter throws for a switched-off backend, so a session cannot open on
+  // a shell the user just disabled.
+  ctx.tools.register(terminalTool(ctx, terminalRegistry, paths, () => {
+    const shell = currentShell();
+    if ((SHELLS as readonly string[]).includes(shell) && !switchOn(shell)) {
+      throw new Error(`dsh-bash-terminal-ts: ${shell} backend is not activated - enable its switch in the plugin settings first.`);
+    }
+    return shell;
+  }));
 
   // The model-facing description must track the user's chosen default
   // terminal: a static description listing every backend leaves the model
@@ -1049,6 +1131,9 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     async execute(args, exec) {
       const v = validateArgs(args);
       const shell = currentShell();
+      if ((SHELLS as readonly string[]).includes(shell) && !switchOn(shell)) {
+        throw new Error(`dsh-bash-terminal-ts: ${shell} backend is not activated - ask the user to enable its switch in the plugin settings (bottom terminal), or choose another default terminal.`);
+      }
       const argv0 = buildArgv(shell, v.command, paths, v.distro);
       if (argv0[0] === undefined) {
         throw new Error(`dsh-bash-terminal-ts: ${shell} backend unavailable - executable not found. Install it or set the corresponding *Path config.`);

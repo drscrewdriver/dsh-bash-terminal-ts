@@ -225,7 +225,7 @@ assert.ok(localeRegisters[0].dicts.en["shell.title"]);
 // node: builtins), so the contract is asserted against the shipped bundle and
 // the rendered menu instead. The host list is spelled out here on purpose: if a
 // backend is added to src/index.ts SHELLS without the client half, this fails.
-const hostShells = ["powershell", "gitbash", "msys2", "wsl"];
+const hostShells = ["powershell", "gitbash", "msys2", "wsl", "payload"];
 const bundleShells = /var SHELLS = \[([^\]]*)\]/.exec(bundle);
 assert.ok(bundleShells, "client bundle declares its shell list");
 const parsedShells = bundleShells[1].split(",").map((s) => s.trim().replace(/^"|"$/g, ""));

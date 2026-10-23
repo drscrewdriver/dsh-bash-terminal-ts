@@ -35,7 +35,7 @@ export interface CatalogEntry {
   readonly label: string;
   readonly path?: string;
   readonly available: boolean;
-  readonly reason: "installed" | "not-installed" | "no-distro" | "launcher-only";
+  readonly reason: "installed" | "not-installed" | "no-distro" | "launcher-only" | "wsl-preferred";
   readonly activated: boolean;
   readonly togglable: boolean;
   readonly argv?: readonly string[];

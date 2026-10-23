@@ -39,7 +39,7 @@ import { post, readConfig, readLegacyConfig, writeDefaultShell, writeLegacyDefau
 import type { CatalogEntry, ConfigSnapshot } from "./webterminals/browser/api";
 
 const SETTINGS_NS = "settings.bash-terminal";
-const SHELLS = ["powershell", "gitbash", "msys2", "wsl"] as const;
+const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload"] as const;
 
 // Injected once when the browser loads the bundle (node tests guard on document).
 const ROW_CSS =
@@ -109,12 +109,36 @@ function badgeKey(row: CatalogEntry): string {
     ? "dock.state.noDistro"
     : row.reason === "launcher-only"
       ? "dock.state.launcherOnly"
-      : "dock.state.notInstalled";
+      : row.reason === "wsl-preferred"
+        ? "dock.state.wslPreferred"
+        : "dock.state.notInstalled";
+}
+
+/**
+ * Options for the default-terminal dropdown. The host's "default" write is
+ * validated against activated+available catalog rows, so the picker must offer
+ * exactly that set (powershell included: it is the floor and always on). A
+ * stored value outside the set is appended - the UI shows what IS chosen, not
+ * only what could be, and the host still refuses to re-write it.
+ */
+function dropdownRows(snapshot: ConfigSnapshot | null | undefined, chosen: string): { id: string; label: string }[] {
+  const all = SHELLS.map((id) => ({ id, label: translate("shell." + id) }));
+  const rows = catalogOf(snapshot);
+  if (rows === null) return all;
+  const usable = rows
+    .filter((row) => row.activated && row.available)
+    .map((row) => ({ id: row.id, label: translate("shell." + row.id) }));
+  if (chosen.length > 0 && !usable.some((row) => row.id === chosen)) {
+    const extra = all.find((row) => row.id === chosen);
+    if (extra !== undefined) usable.push(extra);
+  }
+  return usable;
 }
 
 /** 默认终端选择行:读写全部走宿主 bridge(六线统一)。 */
 function ShellPreferenceRow({ snapshot }: { snapshot?: ConfigSnapshot | null }) {
   const [shell, setShell] = useState("powershell");
+  const [snap, setSnap] = useState<ConfigSnapshot | null>(snapshot ?? null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   useEffect(() => {
     let alive = true;
@@ -123,6 +147,7 @@ function ShellPreferenceRow({ snapshot }: { snapshot?: ConfigSnapshot | null }) 
       if (!alive) return;
       if (v && v.defaultShell) {
         setShell(v.defaultShell);
+        setSnap(v);
         setStatus("ready");
       } else {
         setStatus("unavailable");
@@ -161,7 +186,7 @@ function ShellPreferenceRow({ snapshot }: { snapshot?: ConfigSnapshot | null }) 
         <div className="btDesc">{translate("shell.description")}</div>
       </div>
       <ShellPicker
-        rows={SHELLS.map((id) => ({ id, label: translate("shell." + id) }))}
+        rows={dropdownRows(snap, shell)}
         value={shell}
         onChange={(next) => change(next)}
       />

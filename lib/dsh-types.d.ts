@@ -1,5 +1,5 @@
 /** The terminal backends this plugin exposes. */
-export type ShellId = "powershell" | "gitbash" | "msys2" | "wsl";
+export type ShellId = "powershell" | "gitbash" | "msys2" | "wsl" | "payload";
 /** Permissive node of the DSH JSON-schema dialect used in tool output declarations. */
 export interface JsonSchemaNode {
     type?: string;
@@ -175,6 +175,8 @@ export interface ResolvedPaths {
     gitbash?: string;
     msys2?: string;
     wsl?: string;
+    /** The digest-verified pinned POSIX runtime payload (see src/payload.ts). */
+    payload?: string;
 }
 export interface CollectSpec {
     maxBytes: number;

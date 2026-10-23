@@ -87,7 +87,7 @@ const zhKeys = [...new Set([...locales.matchAll(/"((?:shell|dock|tab)\.[A-Za-z0-
 assert.ok(zhKeys.length >= 30, `expected the full key set in lib/locales.js, found ${zhKeys.length}`);
 const unusedKeys = zhKeys.filter((key) => !consumers.some((text) => text.includes(`"${key}"`)));
 // `shell.<id>` is built by concatenation in the preference row, so those are wired.
-const trulyUnused = unusedKeys.filter((key) => !/^shell\.(powershell|gitbash|msys2|wsl)$/.test(key));
+const trulyUnused = unusedKeys.filter((key) => !/^shell\.(powershell|gitbash|msys2|wsl|payload)$/.test(key));
 assert.deepStrictEqual(trulyUnused, [], `dictionary keys rendered by nothing: ${trulyUnused.join(", ")}`);
 
 console.log(`ARTIFACT GATES PASS: id=${idMatch[1]} | client ${(bundle.length / 1024).toFixed(0)}KB, no node leaks, xterm bundled, css inlined | ws external | ${langs.length} locale files | ${zhKeys.length} dictionary keys, none dead`);

@@ -18,6 +18,8 @@
 //      as Administrator: same command, to also create the Git one.
 
 import { existsSync, linkSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { ensurePayloadAlias, findPayloadStoreRoot, payloadAliasPaths } from "./payload-alias.mjs";
 
 /** Each alias: the link to create and the shell it must point at. */
 const ALIASES = [
@@ -63,6 +65,26 @@ for (const alias of ALIASES) {
     console.log(`        run this in an elevated PowerShell or cmd:`);
     console.log(`          cmd /c mklink /H "${alias.link}" "${alias.source}"`);
     blocked += 1;
+  }
+}
+
+// The pinned POSIX payload's menu entry: a hard link inside its own bin\ named
+// bash-terminal.exe plus the stable `payloads\bash-terminal` junction the bundle
+// patch points at. Absent payload = nothing to do (the candidate is skipped by
+// the host per-candidate), so this never counts as blocked.
+{
+  const paths = payloadAliasPaths(process.env);
+  if (paths === undefined) {
+    console.log("skip    payload  LOCALAPPDATA unset; no payload alias target");
+  } else {
+    const rootName = findPayloadStoreRoot(paths.store);
+    if (rootName === undefined) {
+      console.log(`skip    payload  no provisioned root under ${paths.store} (run scripts/provision-payload.mjs first)`);
+    } else {
+      const done = ensurePayloadAlias({ root: join(paths.store, rootName), junction: paths.junction });
+      if (done.skipped !== undefined) console.log(`BAD     payload  ${done.skipped}`);
+      else console.log(`ok      payload  ${done.link} + junction`);
+    }
   }
 }
 
