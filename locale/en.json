@@ -1,4 +1,6 @@
 {
-  "title": "Bottom terminal",
-  "description": "The shell tool plus an embedded terminal for the bottom dock (PowerShell / Git Bash / MSYS2 / WSL), with per-shell activation switches and a default-shell fallback chain."
+  "meta": {
+    "title": "Bottom terminal",
+    "description": "The shell tool plus an embedded terminal for the bottom dock (PowerShell / Git Bash / MSYS2 / WSL), with per-shell activation switches and a default-shell fallback chain."
+  }
 }
