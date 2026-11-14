@@ -34,7 +34,10 @@ assert.ok(/from "ws"/.test(host) || /require\("ws"\)/.test(host), "the host sock
 // 4) the nine metadata files the host scans, with en as the anchor.
 const langs = ["zh", "en", "ja", "ko", "fr", "de", "it", "ru", "es"];
 for (const lang of langs) {
-  const meta = JSON.parse(readFileSync(`locale/${lang}.json`, "utf8"));
+  const parsed = JSON.parse(readFileSync(`locale/${lang}.json`, "utf8"));
+  // locale 元数据落成 `{ meta: { title, description } }`（gen-locale-meta 的产物形状）；
+  // 兼容旧的根级平铺形状，避免误报。
+  const meta = parsed.meta ?? parsed;
   assert.ok(typeof meta.title === "string" && meta.title.length > 0, `locale/${lang}.json needs a title`);
   assert.ok(typeof meta.description === "string" && meta.description.length > 0, `locale/${lang}.json needs a description`);
 }
