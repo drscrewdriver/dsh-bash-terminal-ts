@@ -21,8 +21,9 @@ DSH 0.2.1-alpha.3 起子代理能力面强制走预设（`agentPreset`，toolFil
 | `standard-win-msys2` | MSYS2 bash | POSIX bash、`/c/...`、错误纪律/路径转换/双运行时（msys vs mingw64）/CRLF-编码段 | 同上 |
 | `standard-win-wsl2` | WSL2 bash | Linux bash、`/mnt/c/...`、错误纪律/真 Linux 无 MSYS 层/跨边界陷阱（CRLF、大小写、wslpath、python3）段 | 同上 |
 | `standard-win-payload` | 插件自备的钉版 POSIX 运行时载荷 | POSIX bash、`/c/...`、错误纪律/MSYS 路径转换（含「缺工具是载荷树缺口，勿现场装系统版」）/CRLF-编码段 | 同上 |
+| `standard-win-niu` | Niubash (niu) | bash 5.3 语法、Windows 原生路径、错误纪律/无 MSYS 层（确定性路径翻译、niu-git、`/dev/null`→`nul`、`~/.niubashrc`）/CRLF-编码段 | 同上 |
 
-官方 `tool-bash`（沙箱化同名 bash 工具）在**全部五份模板里无条件 disabled**：目录里
+官方 `tool-bash`（沙箱化同名 bash 工具）在**全部六份模板里无条件 disabled**：目录里
 出现同名 `bash` 正是这组预设要对冲的带内干扰源。pwsh 工具则只在 bash 族四份里禁用
 （那里 `shell` 已接 bash 后端）；`standard-win` **保留官方 pwsh 工具**——win 默认体验
 就该带沙箱化 PowerShell 面，主入口仍是本插件的 `shell` 工具（后端由用户在设置里选定）。

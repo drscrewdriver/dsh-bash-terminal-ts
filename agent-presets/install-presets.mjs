@@ -50,6 +50,7 @@ if (opt.help || opt.list) {
       "  standard-win-msys2    MSYS2 bash        - + msys-vs-mingw64 dual-runtime guidance",
       "  standard-win-wsl2     WSL2 Linux bash   - /mnt/c paths, case-sensitivity/CRLF/wslpath traps",
       "  standard-win-payload  pinned POSIX payload - digest-verified backup runtime; opt-in twice, see below",
+      "  standard-win-niu      Niubash (niu)     - Rust-native bash 5.3 semantics, no MSYS layer, Windows-native paths",
       "",
       "placeholders (%%token%% lines in the persona):",
       "  --set pythonPath=<path>         Windows interpreter; bash templates want /c/... form",
