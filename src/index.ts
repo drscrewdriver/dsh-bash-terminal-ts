@@ -62,7 +62,7 @@ const ENTRY_ID = "tool-bash-terminal";
 export const inject = ["tools", "systemPrompt", "shellEnv", "subprocess", "settings", "sandbox", "sandboxPolicy"];
 
 /** The terminal backends this tool exposes, in catalog order. */
-export const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload"] as const;
+export const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload", "niu"] as const;
 /** The backend used when the caller does not name one. */
 export const DEFAULT_SHELL: ShellId = "powershell";
 /** Default per-command timeout (ms). */
@@ -148,6 +148,10 @@ export interface ConfigValues {
   enablePosixPayload: boolean;
   /** Explicit payload root or bin/bash.exe path; '' = auto-discovery only. */
   payloadPosixPath: string;
+  /** Fixed niu.exe path; '' = auto-discovery via candidateNiuPaths. */
+  niuPath: string;
+  /** Activation switch for the Niubash row (default true: detected means on). */
+  shellNiu: boolean;
 }
 
 /** Runtime configuration schema. */
@@ -172,7 +176,9 @@ export const Config = z.object({
   // Payload gate state is read once per process (paths resolve at startup), so
   // these are deliberately NOT volatile: a flip needs the restart it implies.
   enablePosixPayload: z.boolean().default(false),
-  payloadPosixPath: z.string().default("")
+  payloadPosixPath: z.string().default(""),
+  niuPath: z.string().default(""),
+  shellNiu: z.boolean().default(true).volatile()
 });
 
 // ---- executable resolution ------------------------------------------------
@@ -261,6 +267,31 @@ export function candidateMsys2Paths(env: NodeJS.ProcessEnv = process.env): strin
   return candidates;
 }
 
+/**
+ * Niubash locations, in preference order: the per-user installer default
+ * (LOCALAPPDATA\Programs\Niubash) first, then the winget shim link, then a
+ * machine-wide install, then PATH entries. Read from the registry on this
+ * machine: the installer writes a USER Path entry pointing at the capitalized
+ * directory, so the first candidate must match that exact casing on
+ * case-sensitive filesystems (Windows itself is case-insensitive).
+ */
+export function candidateNiuPaths(env: NodeJS.ProcessEnv = process.env): string[] {
+  const localAppData = env.LOCALAPPDATA ?? "";
+  const programFiles = env.ProgramFiles ?? "C:\\Program Files";
+  const candidates: string[] = [];
+  if (localAppData.length > 0) {
+    candidates.push(join(localAppData, "Programs", "Niubash", "niu.exe"));
+    candidates.push(join(localAppData, "Microsoft", "WinGet", "Links", "niu.exe"));
+  }
+  candidates.push(join(programFiles, "Niubash", "niu.exe"));
+  for (const entry of (env.PATH ?? "").split(";")) {
+    const trimmed = entry.trim().replace(/^"|"$/g, "");
+    if (trimmed.length === 0) continue;
+    candidates.push(join(trimmed, "niu.exe"));
+  }
+  return candidates;
+}
+
 export function defaultWslPath(env: NodeJS.ProcessEnv = process.env): string {
   const systemRoot = env.SystemRoot ?? "C:\\Windows";
   return join(systemRoot, "System32", "wsl.exe");
@@ -269,7 +300,7 @@ export function defaultWslPath(env: NodeJS.ProcessEnv = process.env): string {
 /** Executable paths, possibly undefined when a backend is not installed. */
 export type { ResolvedPaths };
 
-type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath">>;
+type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath" | "niuPath">>;
 
 export function resolveAllPaths(
   config: PathConfig = {},
@@ -288,10 +319,13 @@ export function resolveAllPaths(
   const wsl = config.wslPath && config.wslPath.trim().length > 0
     ? config.wslPath
     : defaultWslPath(env);
+  const niu = config.niuPath && config.niuPath.trim().length > 0
+    ? config.niuPath
+    : resolveFromCandidates(candidateNiuPaths(env));
   // The payload is its OWN backend (first-class catalog row) - it never
   // silently substitutes for the gitbash slot, so a row labelled "Git Bash"
   // always names a shell the machine actually has.
-  return { pwsh, gitbash, msys2, wsl, ...(payloadBash !== undefined ? { payload: payloadBash } : {}) };
+  return { pwsh, gitbash, msys2, wsl, niu, ...(payloadBash !== undefined ? { payload: payloadBash } : {}) };
 }
 
 // ---- argv / env construction ------------------------------------------------
@@ -316,6 +350,11 @@ export function buildArgv(
       // Same login-shell rule as msys2/gitbash: the payload is a
       // Git-for-Windows tree and `-lc` is what gives it a usable PATH.
       return [paths.payload, "-lc", command];
+    case "niu":
+      // Same login-shell rule: -lc sources the profile chain so winuxcmd's
+      // bin directory joins PATH. (niu has no MSYS runtime; see findings F2
+      // for the sandbox question this backend answers.)
+      return [paths.niu, "-lc", command];
     case "wsl": {
       const distroArg = distro !== undefined && distro.trim().length > 0 ? ["-d", distro.trim()] : [];
       return [paths.wsl, ...distroArg, "-e", "bash", "-lc", command];
@@ -842,6 +881,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     if (shell === "msys2") return read(config.shellMsys2 as boolean | undefined, true);
     if (shell === "wsl") return read(config.shellWsl as boolean | undefined, true);
     if (shell === "payload") return read(config.shellPayload as boolean | undefined, false);
+  if (shell === "niu") return read(config.shellNiu as boolean | undefined, true);
     return false;
   };
   /**

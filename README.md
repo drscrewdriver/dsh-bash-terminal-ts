@@ -4,7 +4,7 @@
 
 ![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
 
-DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一执行 **PowerShell / Git Bash / MSYS2 / WSL** 四种终端命令。
+DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一执行 **PowerShell / Git Bash / MSYS2 / WSL / Niubash** 五种终端命令。
 
 > **本仓库是 `MAXeaglet/dsh-bash-terminal` 的 TypeScript 重写**，带可用的 MSYS2/MINGW64 支持。兼容线按 DSH 宿主段划分，各线共用包名 `dsh-bash-terminal-ts`，以 npm dist-tag 区分：
 >
@@ -24,6 +24,7 @@ DSH（DeepSeek Harness）插件：一个 `shell` 工具，在 Windows 上统一�
 | `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX；`/d/workspace`；PATH 含 `/usr/bin`、`/mingw64/bin` | `$NAME` |
 | `msys2` | MSYS2 `bash -lc <cmd>`（`C:\msys64\usr\bin\bash.exe`） | POSIX；`/c/...`；PATH 含 `/usr/bin`、`/mingw64/bin`（gcc / make） | `$NAME`（自动注入 `MSYSTEM=MINGW64`） |
 | `wsl` | `wsl [-d <distro>] -e bash -lc <cmd>` | Linux；`/mnt/d/...` | `$NAME`（经 WSLENV） |
+| `niu` | [Niubash](https://github.com/unixwin/niubash) `niu -lc <cmd>`（Rust 原生 bash 5.3 语义，无 MSYS 模拟层） | POSIX；`C:\...` 与 `/c/...` 均按确定性规则转换；命令层为 WinuxCmd（178 applets） | `$NAME` |
 
 每次调用都启动全新 shell：**不保留状态**（cwd / 变量 / 别名）——请传 `workdir` 而不是用 `cd`。
 

@@ -122,6 +122,7 @@ export function mountBrowserTerminals(input: MountInput): BrowserTerminalMount {
     // Opt-in twice over: enablePosixPayload provisions the runtime, this
     // switch decides whether a provisioned payload may show in pickers.
     payload: readField("shellPayload", false),
+    niu: readField("shellNiu", true),
   });
   const wslDistro = (): string => readField("wslDistro", "").trim();
   /** The master switch: off hides the child switches and refuses allocations. */

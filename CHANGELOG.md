@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (feat/niu-shell-backend)
+
+- **新增第六后端 `niu`（Niubash）**：[unixwin/niubash](https://github.com/unixwin/niubash)（Rust 原生 bash 5.3 语义，无 MSYS/Cygwin 模拟层，`niu.exe` ≈16MB 零 DLL）。与 `payload` 同构的一等后端：`ShellId`/`SHELLS`/`SHELL_PRIORITY`（niu 在 payload 之前，payload 仍末位兜底）、`candidateNiuPaths()`（LOCALAPPDATA\Programs\Niubash → WinGet Links → ProgramFiles → PATH）、`buildArgv` 模型侧 `niu -lc <cmd>`、`terminalArgv`/`uiArgv` 交互侧 `niu -i`（读 `~/.niubashrc`）、`shellNiu` 开关（默认 true，检测到即可用）+ `niuPath` 覆写配置、`SWITCH_FIELD`/`mount.ts`/op 路由/默认终端下拉/9 语词表（`shell.niu` 按专有名词规则不译）。官方右栏菜单候选表末位追加 `niu.exe`（文件名唯一，不抢 WSL 转发器的 `bash` 键；`winuxcmd\bin\bash.exe` 是 niu 硬链接，**绝不入表**）。
+- **probe() 路径映射修正**：niu 原会落入 wsl 兜底分支读错路径槽（测试先红后修的实证）。`check-artifacts.mjs` 死键白名单与 `test/client.ts` hostShells 漂移闸同步补 niu。
+- **沙箱问题（findings F2）**：Git Bash/MSYS2 因 MSYS 运行时无法被 DSH ACL 受限令牌包裹（CreateFileMapping error 5）；niu 为原生二进制，本机 confined 对照冒烟通过（niu exit 0）。系统级结论待农场格复核后回写。
+- **验证**：npm run build / npm test / npm run lint 全绿；niu 1.5.0（rubash 29bbf52481c3 / winuxcmd 1.2.1）真机冒烟 `-lc`/`-c`/`-i` PTY 三形态全过。
+
 ## 0.8.3 (2026-10-24)
 
 - **宿主枚举补 0.2.1-rc.3（17→18 档，engines/全部 peers/dsh.plugin.json/README×7 同串）**：rc.3 契约面零断裂（闸门/settings/vendor/缝/会话 V4 零 diff，仅新增三域 More 菜单行槽），本插件不在其影响面；semver 双向门控命中 rc.3、拒绝未测未来版。**另修正双清单漂移**：`dsh.plugin.json` 版本号自 0.8.2 发布时漏同步（本应随发版同号），现统一为 0.8.3。

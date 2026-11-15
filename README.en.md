@@ -2,7 +2,7 @@
 
 > 🌐 [简体中文](README.md) | [English](README.en.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Italiano](README.it.md) | [Русский](README.ru.md) | [Español](README.es.md) · Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/drscrewdriver/dsh-bash-terminal-ts)
 
-A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / Git Bash / MSYS2 / WSL** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
+A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / Git Bash / MSYS2 / WSL / Niubash** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
 
 ![test](https://github.com/drscrewdriver/dsh-bash-terminal-ts/actions/workflows/test.yml/badge.svg)
 
@@ -26,6 +26,7 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 | `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX; `/d/workspace`; PATH includes `/usr/bin` and `/mingw64/bin` | `$NAME` |
 | `msys2` | MSYS2 `bash -lc <cmd>` (`C:\msys64\usr\bin\bash.exe`) | POSIX; `/c/...`; PATH includes `/usr/bin` and `/mingw64/bin` (gcc / make) | `$NAME` (MSYSTEM=MINGW64 injected) |
 | `wsl` | `wsl [-d <distro>] -e bash -lc <cmd>` | Linux; `/mnt/d/...` | `$NAME` (via WSLENV) |
+| `niu` | [Niubash](https://github.com/unixwin/niubash) `niu -lc <cmd>` (Rust-native bash 5.3 semantics, no MSYS emulation layer) | POSIX; deterministic path translation for both `C:\...` and `/c/...`; command layer is WinuxCmd (178 applets) | `$NAME` |
 
 - **User decides, the AI cannot override**: pick the default terminal in Settings -> General -> Default terminal (PowerShell / Git Bash / MSYS2 / WSL). The setting persists through the DSH settings system; the `shell` tool always obeys it.
 - **Official sandbox seam**: the `shell` tool resolves the DSH sandbox policy per call and confines PowerShell argv through `ctx.sandbox` — same fail-closed `SandboxUnavailableError` semantics as the shipped executors. Git Bash, MSYS2 and WSL run unconfined: WSL is its own Linux VM, while Git Bash and MSYS2 cannot run under the DSH Windows ACL restricted-token runner (Cygwin/MSYS2 aborts with `CreateFileMapping` Win32 error 5). Official `sandbox_permissions` / `justification` escalation and denial markers included.

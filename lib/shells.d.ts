@@ -29,6 +29,7 @@ export interface ShellSwitches {
     gitbash: boolean;
     msys2: boolean;
     wsl: boolean;
+    niu: boolean;
     payload: boolean;
 }
 /** Everything the catalog builder needs from the outside world. */

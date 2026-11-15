@@ -25,7 +25,7 @@ export type { ShellId };
 /** Catalog order = fallback order: powershell is BOTH first choice and floor. The
  * pinned POSIX payload sits last: it only earns a seat when the machine's own
  * shells are absent, and a detected WSL distro vetoes it before that. */
-export const SHELL_PRIORITY: readonly ShellId[] = ["powershell", "gitbash", "msys2", "wsl", "payload"];
+export const SHELL_PRIORITY: readonly ShellId[] = ["powershell", "gitbash", "msys2", "wsl", "niu", "payload"];
 
 /** Why one backend is not launchable (drives the settings-row badge). */
 export type ShellUnavailable = "installed" | "not-installed" | "no-distro" | "launcher-only" | "wsl-preferred";
@@ -52,6 +52,7 @@ export interface ShellSwitches {
   gitbash: boolean;
   msys2: boolean;
   wsl: boolean;
+  niu: boolean;
   payload: boolean;
 }
 
@@ -81,6 +82,7 @@ const LABELS: Record<ShellId, string> = {
   gitbash: "Git Bash",
   msys2: "MSYS2",
   wsl: "WSL bash",
+  niu: "Niubash",
   payload: "POSIX payload",
 };
 
@@ -128,6 +130,10 @@ export function uiArgv(shell: ShellId, paths: ResolvedPaths, wslDistro = ""): st
       // The payload is a Git-for-Windows tree: the interactive rules are the
       // gitbash ones (an interactive non-login shell; its /etc still works).
       return [requirePath(paths.payload, shell), "-i"];
+    case "niu":
+      // Interactive non-login: niu reads ~/.niubashrc (its only Windows
+      // startup file), so the user's prompt and colours survive.
+      return [requirePath(paths.niu, shell), "-i"];
     case "wsl": {
       const distro = wslDistro.trim();
       return distro.length > 0
@@ -171,7 +177,8 @@ function probe(id: ShellId, facts: CatalogFacts): { available: boolean; reason: 
       : id === "gitbash" ? facts.paths.gitbash
         : id === "msys2" ? facts.paths.msys2
           : id === "payload" ? facts.paths.payload
-            : facts.paths.wsl;
+            : id === "niu" ? facts.paths.niu
+              : facts.paths.wsl;
   if (path === undefined || path.length === 0) {
     if (id === "payload" && facts.payloadSuppressed === true) return { available: false, reason: "wsl-preferred" };
     return { available: false, reason: "not-installed" };

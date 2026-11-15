@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Terminal inférieur",
-    "description": "L'outil shell et un terminal intégré du dock bas (PowerShell / Git Bash / MSYS2 / WSL), avec activation par shell et chaîne de repli."
+    "description": "L'outil shell et un terminal intégré du dock bas (PowerShell / Git Bash / MSYS2 / WSL / Niubash), avec activation par shell et chaîne de repli."
   }
 }

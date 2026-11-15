@@ -71,6 +71,7 @@
       - pwsh
       - powershell
       - cmd
+      - niu.exe
     maxTerminals: 8
     maxCols: 500
     maxRows: 200

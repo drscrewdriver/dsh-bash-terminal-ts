@@ -4,7 +4,7 @@ export declare const name = "bash-terminal";
 /** Services required before the tool can register. */
 export declare const inject: string[];
 /** The terminal backends this tool exposes, in catalog order. */
-export declare const SHELLS: readonly ["powershell", "gitbash", "msys2", "wsl", "payload"];
+export declare const SHELLS: readonly ["powershell", "gitbash", "msys2", "wsl", "payload", "niu"];
 /** The backend used when the caller does not name one. */
 export declare const DEFAULT_SHELL: ShellId;
 /** Static shape of the runtime configuration schema. */
@@ -64,6 +64,10 @@ export interface ConfigValues {
     enablePosixPayload: boolean;
     /** Explicit payload root or bin/bash.exe path; '' = auto-discovery only. */
     payloadPosixPath: string;
+    /** Fixed niu.exe path; '' = auto-discovery via candidateNiuPaths. */
+    niuPath: string;
+    /** Activation switch for the Niubash row (default true: detected means on). */
+    shellNiu: boolean;
 }
 /** Runtime configuration schema. */
 export declare const Config: import("./dsh.js").SchemasterySchema;
@@ -91,10 +95,19 @@ export declare function candidateGitBashPaths(env?: NodeJS.ProcessEnv): string[]
  * under the DSH Windows ACL restricted-token sandbox.
  */
 export declare function candidateMsys2Paths(env?: NodeJS.ProcessEnv): string[];
+/**
+ * Niubash locations, in preference order: the per-user installer default
+ * (LOCALAPPDATA\Programs\Niubash) first, then the winget shim link, then a
+ * machine-wide install, then PATH entries. Read from the registry on this
+ * machine: the installer writes a USER Path entry pointing at the capitalized
+ * directory, so the first candidate must match that exact casing on
+ * case-sensitive filesystems (Windows itself is case-insensitive).
+ */
+export declare function candidateNiuPaths(env?: NodeJS.ProcessEnv): string[];
 export declare function defaultWslPath(env?: NodeJS.ProcessEnv): string;
 /** Executable paths, possibly undefined when a backend is not installed. */
 export type { ResolvedPaths };
-type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath">>;
+type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2Path" | "wslPath" | "niuPath">>;
 export declare function resolveAllPaths(config?: PathConfig, env?: NodeJS.ProcessEnv, payloadBash?: string): ResolvedPaths;
 export declare function buildArgv(shell: string, command: string, paths: ResolvedPaths, distro?: string): Array<string | undefined>;
 /**

@@ -180,10 +180,10 @@ async function ask(server: ReturnType<typeof fakeServer>, body: Record<string, u
 }
 
 /** The switch set every harness case starts from. */
-const ALL_ON = { gitbash: true, msys2: true, wsl: true, payload: false };
+const ALL_ON = { gitbash: true, msys2: true, wsl: true, niu: true, payload: false };
 
-async function harness(options: { loopback?: boolean; unavailable?: string; switches?: { gitbash: boolean; msys2: boolean; wsl: boolean; payload?: boolean }; enabled?: boolean; shim?: boolean } = {}) {
-  const switches = { payload: false, ...(options.switches ?? ALL_ON) };
+async function harness(options: { loopback?: boolean; unavailable?: string; switches?: { gitbash: boolean; msys2: boolean; wsl: boolean; niu?: boolean; payload?: boolean }; enabled?: boolean; shim?: boolean } = {}) {
+  const switches = { niu: true, payload: false, ...(options.switches ?? ALL_ON) };
   const enabledState = options.enabled ?? true;
   let shimState = options.shim ?? false;
   const server = fakeServer(options.loopback ?? true);
@@ -231,7 +231,7 @@ async function harness(options: { loopback?: boolean; unavailable?: string; swit
   const got = await ask(h.server, { op: "get" });
   assert.strictEqual(got.status, 200);
   const value = got.json.value as Record<string, unknown>;
-  assert.strictEqual((value.catalog as unknown[]).length, 5, "the catalog is served (payload row included)");
+  assert.strictEqual((value.catalog as unknown[]).length, 6, "the catalog is served (payload and niu rows included)");
   assert.strictEqual((value.effective as { id: string }).id, "gitbash", "the effective shell is computed host-side");
 
   const opened = await ask(h.server, { op: "terminal.open", sessionId: "s1", cols: 100, rows: 30 });
@@ -447,7 +447,7 @@ async function harness(options: { loopback?: boolean; unavailable?: string; swit
     .slice(Math.max(entry.lastIndexOf("/"), entry.lastIndexOf("\\")) + 1)
     .toLowerCase()
     .replace(/\.exe$/u, "");
-  assert.deepEqual(lines.length, 8, "the override lists every stock candidate plus the two aliases");
+  assert.deepEqual(lines.length, 9, "the override lists every stock candidate plus the two aliases and niu.exe");
   for (const stock of ["zsh", "bash", "fish", "pwsh", "powershell", "cmd"]) {
     assert.ok(lines.includes(stock), `the override keeps the stock \`${stock}\` candidate`);
   }
