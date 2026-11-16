@@ -2,9 +2,10 @@
   "name": "dsh-bash-terminal-ts",
   "version": "0.9.0",
   "publishConfig": {
+    "registry": "https://registry.npmjs.org",
     "tag": "latest"
   },
-  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, or WSL on Windows, plus an embedded terminal for the bottom dock (dsh-better-sidebar's terminal tab) with per-shell activation switches and a default-shell fallback chain.",
+  "description": "DSH plugin: one shell tool that runs commands through PowerShell, Git Bash, MSYS2, WSL or Niubash on Windows, plus an embedded terminal for the bottom dock (dsh-better-sidebar's terminal tab) with per-shell activation switches and a default-shell fallback chain.",
   "author": "drscrewdriver",
   "license": "MIT",
   "repository": {
