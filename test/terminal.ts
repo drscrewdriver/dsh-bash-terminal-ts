@@ -73,7 +73,12 @@ const ctx = {
 };
 const registry = createTerminalRegistry(ctx as never);
 const pwsh7 = "C:/Program Files/PowerShell/7/pwsh.exe";
-const paths = { pwsh: existsSync(pwsh7) ? pwsh7 : "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe", gitbash: "C:/Program Files/Git/bin/bash.exe", msys2: "C:/msys64/usr/bin/bash.exe", wsl: "C:/WINDOWS/System32/wsl.exe" };
+const ps51 = "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe";
+// The fixture mirrors what shell resolution finds on THIS machine, so the argv
+// assertions below must be written against the resolved value, not a hardcoded
+// path: the Windows runner image ships pwsh 7, while a machine whose pwsh comes
+// from the Store resolves the 5.1 fallback here.
+const paths = { pwsh: existsSync(pwsh7) ? pwsh7 : ps51, gitbash: "C:/Program Files/Git/bin/bash.exe", msys2: "C:/msys64/usr/bin/bash.exe", wsl: "C:/WINDOWS/System32/wsl.exe" };
 let defaultShell = "gitbash";
 const tool = terminalTool(ctx as never, registry, paths, () => defaultShell);
 assert.strictEqual(tool.name, "terminal");
@@ -91,7 +96,9 @@ assert.deepStrictEqual(terminalArgv("gitbash", paths, undefined), ["C:/Program F
 // msys2 interactive sessions use -l, NEVER -lc: this argv carries no command,
 // and `bash -lc` with no operand dies with "-c: option requires an argument".
 assert.deepStrictEqual(terminalArgv("msys2", paths, undefined), ["C:/msys64/usr/bin/bash.exe", "-l"]);
-assert.deepStrictEqual(terminalArgv("powershell", paths, undefined), ["C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe", "-NoLogo", "-NoProfile"]);
+// powershell argv passes paths.pwsh through verbatim, so assert against the
+// value the fixture actually resolved (see the note on `paths` above).
+assert.deepStrictEqual(terminalArgv("powershell", paths, undefined), [paths.pwsh, "-NoLogo", "-NoProfile"]);
 
 // Wiring guard: the PTY path must take its env from the shared buildEnv helper
 // (with the inherited WSLENV passed explicitly), not from an inline duplicate —
