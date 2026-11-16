@@ -216,16 +216,24 @@ if (wslOpened !== undefined) {
   // Tolerate every observed WSL failure mode (no distro, ConPTY RPC errors,
   // and the localhost-proxy "Wsl/Service/E_UNEXPECTED" crash) — environment
   // limits skip; only a genuinely broken PTY path should fail.
+  // The "no distribution installed" banner arrives with ConPTY cursor moves
+  // inside the quoted command (`--install <Dis<ESC>[?25htro>`), so match on the
+  // ANSI-stripped text or the phrase never lines up.
+  const wslPlain = wslOut.output.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
   const wslFailed = wslOut.output.length === 0
-    || wslOut.output.includes("0x8007072c")
-    || wslOut.output.includes("RPC")
-    || wslOut.output.includes("not installed")
-    || wslOut.output.includes("E_UNEXPECTED")
-    || wslOut.output.includes("Wsl/Service")
+    || wslPlain.includes("0x8007072c")
+    || wslPlain.includes("RPC")
+    || wslPlain.includes("not installed")
+    || wslPlain.includes("E_UNEXPECTED")
+    || wslPlain.includes("Wsl/Service")
+    // Ran on the CI runner (windows-latest with no WSL distro): the WSL banner
+    // telling you to install one is an environment limit, not a PTY defect.
+    || wslPlain.includes("wsl.exe --list --online")
+    || wslPlain.includes("wsl.exe --install")
     // VM networking-provisioning failures (mirrored-networking setup crash):
     // the distro boots but the shell never comes up — same environment limit.
-    || wslOut.output.includes("0x8007054f")
-    || wslOut.output.includes("ConfigureNetworking");
+    || wslPlain.includes("0x8007054f")
+    || wslPlain.includes("ConfigureNetworking");
   if (wslFailed) {
     console.log("NOTE: wsl.exe interactive unavailable in this environment (no distro / ConPTY RPC error); skipping assertion");
   } else {
