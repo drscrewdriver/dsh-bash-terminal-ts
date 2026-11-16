@@ -73,7 +73,12 @@ const ctx = {
 };
 const registry = createTerminalRegistry(ctx as never);
 const pwsh7 = "C:/Program Files/PowerShell/7/pwsh.exe";
-const paths = { pwsh: existsSync(pwsh7) ? pwsh7 : "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe", gitbash: "C:/Program Files/Git/bin/bash.exe", msys2: "C:/msys64/usr/bin/bash.exe", wsl: "C:/WINDOWS/System32/wsl.exe" };
+const ps51 = "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe";
+// The fixture mirrors what shell resolution finds on THIS machine, so the argv
+// assertions below must be written against the resolved value, not a hardcoded
+// path: the Windows runner image ships pwsh 7, while a machine whose pwsh comes
+// from the Store resolves the 5.1 fallback here.
+const paths = { pwsh: existsSync(pwsh7) ? pwsh7 : ps51, gitbash: "C:/Program Files/Git/bin/bash.exe", msys2: "C:/msys64/usr/bin/bash.exe", wsl: "C:/WINDOWS/System32/wsl.exe" };
 let defaultShell = "gitbash";
 const tool = terminalTool(ctx as never, registry, paths, () => defaultShell);
 assert.strictEqual(tool.name, "terminal");
@@ -91,7 +96,9 @@ assert.deepStrictEqual(terminalArgv("gitbash", paths, undefined), ["C:/Program F
 // msys2 interactive sessions use -l, NEVER -lc: this argv carries no command,
 // and `bash -lc` with no operand dies with "-c: option requires an argument".
 assert.deepStrictEqual(terminalArgv("msys2", paths, undefined), ["C:/msys64/usr/bin/bash.exe", "-l"]);
-assert.deepStrictEqual(terminalArgv("powershell", paths, undefined), ["C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe", "-NoLogo", "-NoProfile"]);
+// powershell argv passes paths.pwsh through verbatim, so assert against the
+// value the fixture actually resolved (see the note on `paths` above).
+assert.deepStrictEqual(terminalArgv("powershell", paths, undefined), [paths.pwsh, "-NoLogo", "-NoProfile"]);
 
 // Wiring guard: the PTY path must take its env from the shared buildEnv helper
 // (with the inherited WSLENV passed explicitly), not from an inline duplicate —
@@ -209,16 +216,24 @@ if (wslOpened !== undefined) {
   // Tolerate every observed WSL failure mode (no distro, ConPTY RPC errors,
   // and the localhost-proxy "Wsl/Service/E_UNEXPECTED" crash) — environment
   // limits skip; only a genuinely broken PTY path should fail.
+  // The "no distribution installed" banner arrives with ConPTY cursor moves
+  // inside the quoted command (`--install <Dis<ESC>[?25htro>`), so match on the
+  // ANSI-stripped text or the phrase never lines up.
+  const wslPlain = wslOut.output.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
   const wslFailed = wslOut.output.length === 0
-    || wslOut.output.includes("0x8007072c")
-    || wslOut.output.includes("RPC")
-    || wslOut.output.includes("not installed")
-    || wslOut.output.includes("E_UNEXPECTED")
-    || wslOut.output.includes("Wsl/Service")
+    || wslPlain.includes("0x8007072c")
+    || wslPlain.includes("RPC")
+    || wslPlain.includes("not installed")
+    || wslPlain.includes("E_UNEXPECTED")
+    || wslPlain.includes("Wsl/Service")
+    // Ran on the CI runner (windows-latest with no WSL distro): the WSL banner
+    // telling you to install one is an environment limit, not a PTY defect.
+    || wslPlain.includes("wsl.exe --list --online")
+    || wslPlain.includes("wsl.exe --install")
     // VM networking-provisioning failures (mirrored-networking setup crash):
     // the distro boots but the shell never comes up — same environment limit.
-    || wslOut.output.includes("0x8007054f")
-    || wslOut.output.includes("ConfigureNetworking");
+    || wslPlain.includes("0x8007054f")
+    || wslPlain.includes("ConfigureNetworking");
   if (wslFailed) {
     console.log("NOTE: wsl.exe interactive unavailable in this environment (no distro / ConPTY RPC error); skipping assertion");
   } else {
@@ -246,7 +261,15 @@ if (existsSync("C:/msys64/usr/bin/bash.exe")) {
   console.log("msys2 PTY output:", JSON.stringify(msysOut.output.slice(-200)));
   assert.ok(msysOut.output.length > 0, "msys2 interactive session produced output (0 bytes = the msys2.exe dead end)");
   assert.ok(msysOut.output.includes("MSYSTEM=MINGW64"), "interactive msys2 session runs the MINGW64 environment: " + JSON.stringify(msysOut.output.slice(-200)));
-  assert.ok(msysOut.output.includes("/mingw64/bin/gcc"), "interactive msys2 session has /mingw64/bin/gcc on PATH: " + JSON.stringify(msysOut.output.slice(-200)));
+  // MSYSTEM=MINGW64 above is the actual regression guard: it can only be there if
+  // the PTY path took its env from buildEnv instead of building it inline. Whether
+  // /mingw64/bin/gcc exists is a property of the machine's MSYS2 packages (the CI
+  // runner ships MSYS2 without the mingw-w64 toolchain), not of the PTY path.
+  if (msysOut.output.includes("/mingw64/bin/gcc")) {
+    console.log("msys2 toolchain on PATH: /mingw64/bin/gcc");
+  } else {
+    console.log("NOTE: /mingw64/bin/gcc absent in this MSYS2 install; MSYSTEM=MINGW64 already covers the env-injection guard, skipping the toolchain assertion");
+  }
   assert.ok(msysOut.output.includes("BASH=/usr/bin/bash"), "interactive msys2 session runs the real bash.exe: " + JSON.stringify(msysOut.output.slice(-200)));
   await tool.execute({ action: "close", sessionId: msysOpened.sessionId }, exec).catch(() => {});
 } else {
