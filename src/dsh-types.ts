@@ -9,8 +9,18 @@
 
 // ---- shared ------------------------------------------------------------------
 
-/** The terminal backends this plugin exposes. */
-export type ShellId = "powershell" | "gitbash" | "msys2" | "wsl" | "payload";
+/**
+ * The terminal backends this plugin exposes.
+ *
+ * Re-exported from `./shell-id.js` rather than declared here: the browser graph
+ * needs the same union (socket frames, catalog rows) and `shell-id.ts` is the one
+ * module with no Node references, so it is the single source of truth. Declaring
+ * a second copy here is how `niu` shipped in the union the catalog reads while
+ * `SHELL_DESCRIPTIONS` stayed five-keyed - a drift the compiler cannot see,
+ * because `Record<ShellId, string>` only complains in the module that owns the
+ * wider union.
+ */
+export type { ShellId } from "./shell-id.js";
 
 /** Permissive node of the DSH JSON-schema dialect used in tool output declarations. */
 export interface JsonSchemaNode {

@@ -1,7 +1,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { buildArgv, buildEnv, candidateGitBashPaths, candidateMsys2Paths, candidatePwshPaths, internals } from "../lib/index.js";
+import { buildArgv, buildEnv, candidateGitBashPaths, candidateMsys2Paths, candidatePwshPaths, internals, SHELLS } from "../lib/index.js";
 const { renderResult, resolveAllPaths, validateArgs, toolDescription, SHELL_DESCRIPTIONS } = internals;
 import assert from "node:assert";
 import { findPayloadRoots, resolvePayloadBash, verifyPayloadRoot, clearHashCache, TRUST_FILE_NAME } from "../lib/payload.js";
@@ -126,8 +126,24 @@ assert.throws(() => validateArgs({ command: "ls", description: "x", timeoutMs: -
 
 // ---- backend-aware tool description -----------------------------------------
 
-// Every backend is covered by its own lead sentence.
-assert.deepStrictEqual(Object.keys(SHELL_DESCRIPTIONS).sort(), ["gitbash", "msys2", "payload", "powershell", "wsl"]);
+// Every backend is covered by its own lead sentence. This list is derived from
+// the runtime `SHELLS` export, NOT hand-written: a hand-written list is exactly
+// how `niu` shipped in the union while its lead sentence was missing, and the
+// resulting `undefined` reached the model's prompt as an empty string.
+assert.deepStrictEqual(
+  Object.keys(SHELL_DESCRIPTIONS).sort(),
+  [...SHELLS].sort(),
+  "SHELL_DESCRIPTIONS covers every backend in SHELLS"
+);
+// niu -> bash-flavored description, and it must NOT inherit the MSYS wording.
+const niuDesc = toolDescription(true, "niu");
+assert.ok(niuDesc.includes("is niu"), "niu names the active backend");
+assert.ok(niuDesc.includes("Niubash niu -lc"), "niu lead mentions the niu -lc invocation: " + niuDesc);
+assert.ok(niuDesc.includes("bash 5.3"), "niu lead names the bash version it implements");
+assert.ok(niuDesc.includes("no MSYS emulation layer"), "niu lead states the absence of an MSYS layer");
+assert.ok(niuDesc.includes("~/.niubashrc"), "niu lead names its startup file");
+assert.ok(!niuDesc.includes("undefined"), "no backend leaves an undefined hole in the description");
+assert.ok(niuDesc.includes("Niubash"), "niu is listed among the unconfined backends");
 // The payload backend has its own lead too, and it names the digest gate.
 const payloadDesc = toolDescription(true, "payload");
 assert.ok(payloadDesc.includes("POSIX runtime payload"), "payload lead names the backend: " + payloadDesc);

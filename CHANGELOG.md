@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased (feat/niu-shell-backend)
+## 0.9.0 (2026-11-16)
 
 - **新增第六后端 `niu`（Niubash）**：[unixwin/niubash](https://github.com/unixwin/niubash)（Rust 原生 bash 5.3 语义，无 MSYS/Cygwin 模拟层，`niu.exe` ≈16MB 零 DLL）。与 `payload` 同构的一等后端：`ShellId`/`SHELLS`/`SHELL_PRIORITY`（niu 在 payload 之前，payload 仍末位兜底）、`candidateNiuPaths()`（LOCALAPPDATA\Programs\Niubash → WinGet Links → ProgramFiles → PATH）、`buildArgv` 模型侧 `niu -lc <cmd>`、`terminalArgv`/`uiArgv` 交互侧 `niu -i`（读 `~/.niubashrc`）、`shellNiu` 开关（默认 true，检测到即可用）+ `niuPath` 覆写配置、`SWITCH_FIELD`/`mount.ts`/op 路由/默认终端下拉/9 语词表（`shell.niu` 按专有名词规则不译）。官方右栏菜单候选表末位追加 `niu.exe`（文件名唯一，不抢 WSL 转发器的 `bash` 键；`winuxcmd\bin\bash.exe` 是 niu 硬链接，**绝不入表**）。
 - **probe() 路径映射修正**：niu 原会落入 wsl 兜底分支读错路径槽（测试先红后修的实证）。`check-artifacts.mjs` 死键白名单与 `test/client.ts` hostShells 漂移闸同步补 niu。
+- **`ShellId` 单一真源修复（0.9.0 阻断级）**：`src/dsh-types.ts` 与 `src/shell-id.ts` 曾各持一份联合类型，前者漏了 `niu`，而 `index.ts` 恰好从前者 import——`Record<ShellId, string>` 只在 `shell-id.ts` 的宽联合下检查，于是 `SHELL_DESCRIPTIONS` 缺 `niu` 键这件事**编译期不报错**，运行期把 `undefined` 拼进模型提示词（表现为「is niu; commands run there.   Each call…」双空格空洞）。修复：`dsh-types.ts` 改为 `export type { ShellId } from "./shell-id.js"`，并补 `niu` 的专属 lead 句；`test/unit.ts` 的键集断言由手写五元组改为**从运行时 `SHELLS` 派生**，同类漂移今后必然先红。
 - **沙箱问题（findings F2）**：Git Bash/MSYS2 因 MSYS 运行时无法被 DSH ACL 受限令牌包裹（CreateFileMapping error 5）；niu 为原生二进制，本机 confined 对照冒烟通过（niu exit 0）。系统级结论待农场格复核后回写。
 - **验证**：npm run build / npm test / npm run lint 全绿；niu 1.5.0（rubash 29bbf52481c3 / winuxcmd 1.2.1）真机冒烟 `-lc`/`-c`/`-i` PTY 三形态全过。
+- **顺带修 main 的红灯**：合入 `origin/main` 后 `test/terminal.ts` 的 ANSI 剥离正则触发 `no-control-regex`（main 自 `8e2f773` 起 lint 本就失败），改为 `String.fromCharCode(27)` 拼 RegExp，语义不变。
+
+## Unreleased (feat/niu-shell-backend)
 
 ## 0.8.3 (2026-10-24)
 

@@ -219,7 +219,11 @@ if (wslOpened !== undefined) {
   // The "no distribution installed" banner arrives with ConPTY cursor moves
   // inside the quoted command (`--install <Dis<ESC>[?25htro>`), so match on the
   // ANSI-stripped text or the phrase never lines up.
-  const wslPlain = wslOut.output.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
+  // `\u001b` is written as a `String.fromCharCode` escape rather than a regex
+  // escape: `no-control-regex` (part of the lint baseline) rejects the literal
+  // control character in a pattern, and this file has to stay lint-clean.
+  const ESC = String.fromCharCode(27);
+  const wslPlain = wslOut.output.replace(new RegExp(`${ESC}\\[[0-9;?]*[A-Za-z]`, "g"), "");
   const wslFailed = wslOut.output.length === 0
     || wslPlain.includes("0x8007072c")
     || wslPlain.includes("RPC")

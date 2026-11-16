@@ -648,7 +648,8 @@ export const SHELL_DESCRIPTIONS: Record<ShellId, string> = {
   gitbash: "Execute a bash command (Git for Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /d/WorkSpace; PATH includes /usr/bin and /mingw64/bin so git, npm, ssh etc. work; environment variables via $NAME.",
   msys2: "Execute a bash command (MSYS2 bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin and /mingw64/bin so git, npm, gcc, make etc. work; environment variables via $NAME. MSYS2 provides a full GCC/mingw64 toolchain.",
   wsl: "Execute a Linux bash command (wsl [-d <distro>] -e bash -lc <command>) and return its stdout/stderr. Linux syntax; Windows files under /mnt/d/...; environment variables via $NAME.",
-  payload: "Execute a bash command in the plugin's pinned POSIX runtime payload (a digest-verified Git-for-Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin so git, npm, ssh etc. work; environment variables via $NAME. Use it only when the user has deliberately enabled the payload backend."
+  payload: "Execute a bash command in the plugin's pinned POSIX runtime payload (a digest-verified Git-for-Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin so git, npm, ssh etc. work; environment variables via $NAME. Use it only when the user has deliberately enabled the payload backend.",
+  niu: "Execute a bash command (Niubash niu -lc <command>) and return its stdout/stderr. GNU bash 5.3 semantics; WinuxCmd applets (ls, cp, rm, grep, find, cat, sed, awk, ...) are on PATH; native Windows paths such as C:\\... are kept as-is while /c/... style arguments are translated; environment variables via $NAME. Niubash is a native binary with no MSYS emulation layer, so /dev/* redirects other than /dev/null do not exist; its startup file is ~/.niubashrc."
 };
 
 /**
@@ -664,7 +665,7 @@ export function toolDescription(backgroundEnabled: boolean, shell: string = DEFA
   const base = [
     `The user's chosen default terminal (Settings -> General -> Default terminal) is ${active}; commands run there.`,
     lead,
-    "Each call spawns a fresh shell: no state (cwd, variables, aliases) persists between calls - pass workdir instead of using cd. Non-zero exits are reported as [exit code: N] markers; investigate failures before moving on. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Commands run under the DSH sandbox: confined modes (read-only / workspace-write) are enforced through ctx.sandbox and deny fail-closed for PowerShell; danger-full-access, Git Bash, MSYS2, the pinned POSIX payload, and WSL run unconfined."
+    "Each call spawns a fresh shell: no state (cwd, variables, aliases) persists between calls - pass workdir instead of using cd. Non-zero exits are reported as [exit code: N] markers; investigate failures before moving on. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Commands run under the DSH sandbox: confined modes (read-only / workspace-write) are enforced through ctx.sandbox and deny fail-closed for PowerShell; danger-full-access, Git Bash, MSYS2, the pinned POSIX payload, Niubash, and WSL run unconfined."
   ].join(" ");
   if (!backgroundEnabled) return base;
   return base + " Set run_in_background: true for long-running commands: the call returns a job id immediately; read its output with job_output and stop it with job_kill. No timeout applies to background runs.";
