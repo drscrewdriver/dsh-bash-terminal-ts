@@ -48,6 +48,7 @@
     "scripts",
     "template",
     "agent-presets",
+    "docs",
     "locale",
     "tsconfig.json",
     "tsconfig.client.json",
