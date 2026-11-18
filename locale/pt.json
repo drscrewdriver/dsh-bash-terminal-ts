@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Terminal inferior",
+    "description": "A ferramenta shell e o terminal embutido do painel inferior (PowerShell / Git Bash / MSYS2 / WSL / Niubash), com chaves de ativação por shell e cadeia de fallback do shell padrão."
+  }
+}

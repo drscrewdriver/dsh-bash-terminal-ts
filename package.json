@@ -1,6 +1,6 @@
 {
   "name": "dsh-bash-terminal-ts",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "tag": "latest"
@@ -61,11 +61,13 @@
     "README.it.md",
     "README.ru.md",
     "README.es.md",
+    "README.pt.md",
     "CHANGELOG.de.md",
     "CHANGELOG.fr.md",
     "CHANGELOG.it.md",
     "CHANGELOG.ru.md",
     "CHANGELOG.es.md",
+    "CHANGELOG.pt.md",
     "LICENSE",
     "CHANGELOG.md",
     "cordis.patch.yml",

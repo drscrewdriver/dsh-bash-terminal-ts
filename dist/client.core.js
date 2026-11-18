@@ -6570,7 +6570,55 @@ var es = {
   "tab.phase.exited": "terminado",
   "tab.phase.failed": "fall\xF3"
 };
-var dictionaries = { zh, en, ja, ko, fr, de, it, ru, es };
+var pt = {
+  "shell.title": "Terminal padr\xE3o",
+  "shell.description": "Terminal usado pela ferramenta shell para executar comandos",
+  "shell.powershell": "PowerShell",
+  "shell.gitbash": "Git Bash",
+  "shell.msys2": "MSYS2",
+  "shell.wsl": "WSL",
+  "shell.unavailable": "Configura\xE7\xE3o indispon\xEDvel: a ponte de configura\xE7\xE3o do host n\xE3o respondeu (verifique se o host \xE9 a linha compat)",
+  "dock.title": "Terminal inferior",
+  "dock.hint": "Essas chaves valem tanto para o terminal do painel inferior quanto para os backends selecion\xE1veis da ferramenta shell (PowerShell \xE9 o piso, sempre dispon\xEDvel). O terminal oficial da coluna direita n\xE3o muda.",
+  "dock.state.available": "Dispon\xEDvel",
+  "dock.state.notInstalled": "N\xE3o detectado",
+  "dock.state.wslPreferred": "Distro WSL detectada (bash do WSL preferido)",
+  "shell.payload": "POSIX payload",
+  "shell.niu": "Niubash",
+  "dock.state.noDistro": "Nenhuma distribui\xE7\xE3o instalada",
+  "dock.state.launcherOnly": "Apenas um lan\xE7ador foi encontrado; n\xE3o \xE9 poss\xEDvel incorpor\xE1-lo",
+  "dock.powershell.locked": "PowerShell \xE9 o backend de \xFAltimo recurso e n\xE3o pode ser desativado.",
+  "dock.defaultChoice": "Shell padr\xE3o (apenas as ativas e dispon\xEDveis aparecem na lista)",
+  "dock.wslDistro": "Distribui\xE7\xE3o WSL (vazio usa a padr\xE3o do WSL)",
+  "dock.fallback.notice": "{from} n\xE3o est\xE1 dispon\xEDvel agora; este terminal foi iniciado com {to}.",
+  "dock.floor.notice": "Todas as shells est\xE3o desativadas ou indispon\xEDveis; {to} foi usado como \xFAltimo recurso.",
+  "dock.unavailable.noPty": "Nenhum backend PTY dispon\xEDvel neste computador: o node-pty n\xE3o foi compilado e o host n\xE3o exp\xF5e a costura de terminal (execute pnpm approve-builds).",
+  "dock.unavailable.noSocket": "O host n\xE3o exp\xF5e um canal de upgrade de WebSocket; o terminal inferior n\xE3o recebe sa\xEDda.",
+  "dock.unavailable.notInstalled": "O host ainda n\xE3o montou as rotas de terminal; o terminal inferior est\xE1 indispon\xEDvel.",
+  "dock.hostProvided": "O terminal do host est\xE1 no comando; este plugin se colocou de lado.",
+  "dock.applying": "Salvando\u2026",
+  "dock.failed": "Falha ao gravar: {message}",
+  "dock.terminals": "{count} terminal(is) em execu\xE7\xE3o",
+  "dock.refresh": "Redetectar",
+  "dock.enabled.title": "Ativar o terminal inferior",
+  "dock.enabled.description": "Chave geral: desligada oculta as subchaves das shells e recusa aloca\xE7\xF5es",
+  "dock.enabled.off": "Desligado. As subchaves das shells dispon\xEDveis aparecem ao lig\xE1-lo",
+  "dock.shim.title": "Assumir a linha do terminal oficial",
+  "dock.shim.description": "Ative apenas se o host n\xE3o tem controlador de terminal. Publicar duas vezes o mesmo servi\xE7o faz o outro provedor falhar; desligado por padr\xE3o.",
+  "dock.shim.published": "Assumida: a linha \xABTerminal\xBB oficial agora \xE9 alimentada por este plugin",
+  "dock.shim.hostProvides": "O host j\xE1 publica webTerminals; nada foi assumido (a linha oficial j\xE1 funciona)",
+  "dock.state.floor": "\xFAltimo recurso",
+  "tab.title": "Terminal (multi-shell)",
+  "tab.description": "Abre Git Bash / MSYS2 / WSL / PowerShell sobre o backend PTY deste plugin, ao lado do terminal oficial",
+  "tab.new": "Novo",
+  "tab.noShell": "Nenhuma shell dispon\xEDvel (ative uma nos ajustes)",
+  "tab.phase.allocating": "alocando",
+  "tab.phase.connecting": "conectando",
+  "tab.phase.running": "em execu\xE7\xE3o",
+  "tab.phase.exited": "encerrado",
+  "tab.phase.failed": "falhou"
+};
+var dictionaries = { zh, en, ja, ko, fr, de, it, ru, es, pt };
 var fallbackDict = { ...zh };
 
 // src/browser-i18n.ts

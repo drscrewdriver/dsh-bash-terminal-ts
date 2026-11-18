@@ -10,7 +10,7 @@
 // - `ws` must stay an EXTERNAL import in the host bundle: bundling it pulls
 //   `buffer`/`net` into a browser-shaped artifact and breaks the PTY socket;
 // - `locale/en.json` is the anchor the host's package-meta scan insists on, so all
-//   nine files have to be present in the tarball list.
+//   ten files have to be present in the tarball list.
 
 import { readdirSync, readFileSync } from "node:fs";
 import assert from "node:assert";
@@ -31,8 +31,8 @@ assert.deepStrictEqual(leaks, [], `the client bundle must carry no Node-only mod
 // 3) ws stays external on the host side.
 assert.ok(/from "ws"/.test(host) || /require\("ws"\)/.test(host), "the host socket module imports ws as an external dependency");
 
-// 4) the nine metadata files the host scans, with en as the anchor.
-const langs = ["zh", "en", "ja", "ko", "fr", "de", "it", "ru", "es"];
+// 4) the ten metadata files the host scans, with en as the anchor.
+const langs = ["zh", "en", "ja", "ko", "fr", "de", "it", "ru", "es", "pt"];
 for (const lang of langs) {
   const parsed = JSON.parse(readFileSync(`locale/${lang}.json`, "utf8"));
   // locale 元数据落成 `{ meta: { title, description } }`（gen-locale-meta 的产物形状）；
@@ -42,7 +42,7 @@ for (const lang of langs) {
   assert.ok(typeof meta.description === "string" && meta.description.length > 0, `locale/${lang}.json needs a description`);
 }
 
-// 5) the client dictionary really ships nine languages, keyed identically to zh.
+// 5) the client dictionary really ships ten languages, keyed identically to zh.
 const locales = readFileSync("lib/locales.js", "utf8");
 const registered = /dictionaries\s*=\s*\{([^}]*)\}/.exec(locales)?.[1] ?? "";
 for (const lang of langs) {
@@ -68,7 +68,7 @@ assert.ok(bundle.length < 900_000, `the client bundle did not grow unexpectedly:
 
 // 7) no dead copy: every dictionary key must be referenced by something that renders.
 //
-// A key defined in nine languages and read by nobody is not a spare string - it is a
+// A key defined in ten languages and read by nobody is not a spare string - it is a
 // feature that was planned, translated, and never wired (this family shipped exactly
 // that once: a `notice.standsDown` key with no renderer, and here a seven-language
 // dictionary the component bypassed by reading `zh[...]` directly).
