@@ -252,10 +252,6 @@ assert.ok(reg.description.includes("is powershell"), "registration-time descript
 
 // ---- activation gate: switches are ONE truth (user decision, 2026-10) ------
 
-// payload requires shellPayload (default off): chosen but off -> fail closed.
-userDefaultShell = "payload";
-await assert.rejects(() => reg.execute({ command: "ls", description: "t" }, exec), /not activated/);
-
 // A second apply with gitbash switched off: execution fails closed AND the
 // model-facing description degrades to the floor instead of promising a
 // backend the user disabled.

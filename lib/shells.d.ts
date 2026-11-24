@@ -2,12 +2,10 @@ import type { ResolvedPaths } from "./dsh-types.js";
 import type { ShellId } from "./shell-id.js";
 /** Re-exported so existing importers keep working (see shell-id.ts for why). */
 export type { ShellId };
-/** Catalog order = fallback order: powershell is BOTH first choice and floor. The
- * pinned POSIX payload sits last: it only earns a seat when the machine's own
- * shells are absent, and a detected WSL distro vetoes it before that. */
+/** Catalog order = fallback order: powershell is BOTH first choice and floor. */
 export declare const SHELL_PRIORITY: readonly ShellId[];
 /** Why one backend is not launchable (drives the settings-row badge). */
-export type ShellUnavailable = "installed" | "not-installed" | "no-distro" | "launcher-only" | "wsl-preferred";
+export type ShellUnavailable = "installed" | "not-installed" | "no-distro" | "launcher-only";
 /** One catalog row: what the UI shows and what the host would spawn. */
 export interface ShellEntry {
     readonly id: ShellId;
@@ -30,7 +28,6 @@ export interface ShellSwitches {
     msys2: boolean;
     wsl: boolean;
     niu: boolean;
-    payload: boolean;
 }
 /** Everything the catalog builder needs from the outside world. */
 export interface CatalogFacts {
@@ -44,12 +41,6 @@ export interface CatalogFacts {
     switches: ShellSwitches;
     /** WSL distro override from config ('' = the WSL default). */
     wslDistro: string;
-    /**
-     * True when the payload gate was vetoed by a positively-detected WSL distro
-     * (a real Linux bash outranks the MSYS payload). It only colors the payload
-     * row's badge when no payload path resolved - "why" information, not a gate.
-     */
-    payloadSuppressed?: boolean;
 }
 /**
  * `<SystemRoot>\System32\bash.exe` (and the sysnative mirror) is the deprecated

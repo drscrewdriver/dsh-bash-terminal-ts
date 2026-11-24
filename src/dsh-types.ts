@@ -235,8 +235,6 @@ export interface ResolvedPaths {
   gitbash?: string;
   msys2?: string;
   wsl?: string;
-  /** The digest-verified pinned POSIX runtime payload (see src/payload.ts). */
-  payload?: string;
   /** Niubash (native bash reimplementation); see candidateNiuPaths in index.ts. */
   niu?: string;
 }

@@ -39,7 +39,7 @@ import { post, readConfig, readLegacyConfig, writeDefaultShell, writeLegacyDefau
 import type { CatalogEntry, ConfigSnapshot } from "./webterminals/browser/api";
 
 const SETTINGS_NS = "settings.bash-terminal";
-const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload", "niu"] as const;
+const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "niu"] as const;
 
 // Injected once when the browser loads the bundle (node tests guard on document).
 const ROW_CSS =

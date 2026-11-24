@@ -22,13 +22,11 @@ import type { ShellId } from "./shell-id.js";
 /** Re-exported so existing importers keep working (see shell-id.ts for why). */
 export type { ShellId };
 
-/** Catalog order = fallback order: powershell is BOTH first choice and floor. The
- * pinned POSIX payload sits last: it only earns a seat when the machine's own
- * shells are absent, and a detected WSL distro vetoes it before that. */
-export const SHELL_PRIORITY: readonly ShellId[] = ["powershell", "gitbash", "msys2", "wsl", "niu", "payload"];
+/** Catalog order = fallback order: powershell is BOTH first choice and floor. */
+export const SHELL_PRIORITY: readonly ShellId[] = ["powershell", "gitbash", "msys2", "wsl", "niu"];
 
 /** Why one backend is not launchable (drives the settings-row badge). */
-export type ShellUnavailable = "installed" | "not-installed" | "no-distro" | "launcher-only" | "wsl-preferred";
+export type ShellUnavailable = "installed" | "not-installed" | "no-distro" | "launcher-only";
 
 /** One catalog row: what the UI shows and what the host would spawn. */
 export interface ShellEntry {
@@ -53,7 +51,6 @@ export interface ShellSwitches {
   msys2: boolean;
   wsl: boolean;
   niu: boolean;
-  payload: boolean;
 }
 
 /** Everything the catalog builder needs from the outside world. */
@@ -68,12 +65,6 @@ export interface CatalogFacts {
   switches: ShellSwitches;
   /** WSL distro override from config ('' = the WSL default). */
   wslDistro: string;
-  /**
-   * True when the payload gate was vetoed by a positively-detected WSL distro
-   * (a real Linux bash outranks the MSYS payload). It only colors the payload
-   * row's badge when no payload path resolved - "why" information, not a gate.
-   */
-  payloadSuppressed?: boolean;
 }
 
 /** Display labels. The catalog id/label pair is DECIDED BY THIS TABLE. */
@@ -83,7 +74,6 @@ const LABELS: Record<ShellId, string> = {
   msys2: "MSYS2",
   wsl: "WSL bash",
   niu: "Niubash",
-  payload: "POSIX payload",
 };
 
 /**
@@ -126,10 +116,6 @@ export function uiArgv(shell: ShellId, paths: ResolvedPaths, wslDistro = ""): st
       return [requirePath(paths.gitbash, shell), "-i"];
     case "msys2":
       return [requirePath(paths.msys2, shell), "-l"];
-    case "payload":
-      // The payload is a Git-for-Windows tree: the interactive rules are the
-      // gitbash ones (an interactive non-login shell; its /etc still works).
-      return [requirePath(paths.payload, shell), "-i"];
     case "niu":
       // Interactive non-login: niu reads ~/.niubashrc (its only Windows
       // startup file), so the user's prompt and colours survive.
@@ -176,11 +162,9 @@ function probe(id: ShellId, facts: CatalogFacts): { available: boolean; reason: 
     id === "powershell" ? facts.paths.pwsh
       : id === "gitbash" ? facts.paths.gitbash
         : id === "msys2" ? facts.paths.msys2
-          : id === "payload" ? facts.paths.payload
-            : id === "niu" ? facts.paths.niu
-              : facts.paths.wsl;
+          : id === "niu" ? facts.paths.niu
+            : facts.paths.wsl;
   if (path === undefined || path.length === 0) {
-    if (id === "payload" && facts.payloadSuppressed === true) return { available: false, reason: "wsl-preferred" };
     return { available: false, reason: "not-installed" };
   }
   // A configured path is honoured, but a launcher is not a shell: trusting the

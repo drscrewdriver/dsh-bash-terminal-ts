@@ -80,7 +80,6 @@ export function terminalArgv(
   switch (shell) {
     case "powershell": return [paths.pwsh, "-NoLogo", "-NoProfile"];
     case "gitbash": return [paths.gitbash, "-i"];
-    case "payload": return [paths.payload, "-i"];
     case "niu":
       // Interactive non-login: reads ~/.niubashrc (the only startup file niu
       // reads on Windows), keeps the user's prompt and colours.

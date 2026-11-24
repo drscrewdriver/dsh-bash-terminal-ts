@@ -52,7 +52,6 @@ import type {
   ToolRunContext
 } from "./dsh-types.js";
 import { createTerminalRegistry, terminalTool } from "./terminal.js";
-import { resolvePayloadBash } from "./payload.js";
 
 /** Stable Cordis plugin name. */
 export const name = "bash-terminal";
@@ -62,7 +61,7 @@ const ENTRY_ID = "tool-bash-terminal";
 export const inject = ["tools", "systemPrompt", "shellEnv", "subprocess", "settings", "sandbox", "sandboxPolicy"];
 
 /** The terminal backends this tool exposes, in catalog order. */
-export const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "payload", "niu"] as const;
+export const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "niu"] as const;
 /** The backend used when the caller does not name one. */
 export const DEFAULT_SHELL: ShellId = "powershell";
 /** Default per-command timeout (ms). */
@@ -125,29 +124,8 @@ export interface ConfigValues {
   shellGitBash: boolean;
   shellMsys2: boolean;
   shellWsl: boolean;
-  /**
-   * Activation switch for the payload row in the bottom-terminal UI. Separate
-   * from `enablePosixPayload` (the operator gate that RUNS the digest check at
-   * startup): this one only decides whether a resolved payload may appear in
-   * pickers. Default false - the payload is opt-in twice, provisioning and
-   * activation.
-   */
-  shellPayload: boolean;
   /** WSL distribution for the browser terminal; '' means the WSL default. */
   wslDistro: string;
-  /**
-   * Pinned backup POSIX runtime payload (see src/payload.ts - the artifact is
-   * a Git-for-Windows tree; OUR name avoids the bash/msys tokens by policy).
-   * Default off; enabling it lets a digest-verified payload fill the Git Bash
-   * slot as a LAST-RESORT source when the machine has no system Git Bash. A
-   * detected WSL distro outranks the payload entirely (a real WSL bash is the
-   * better POSIX shell), and an unverifiable payload fails closed - it is
-   * never run, never silently replaced. Resolved at startup, so toggling
-   * takes effect on the next restart.
-   */
-  enablePosixPayload: boolean;
-  /** Explicit payload root or bin/bash.exe path; '' = auto-discovery only. */
-  payloadPosixPath: string;
   /** Fixed niu.exe path; '' = auto-discovery via candidateNiuPaths. */
   niuPath: string;
   /** Activation switch for the Niubash row (default true: detected means on). */
@@ -171,12 +149,7 @@ export const Config = z.object({
   shellGitBash: z.boolean().default(true).volatile(),
   shellMsys2: z.boolean().default(true).volatile(),
   shellWsl: z.boolean().default(true).volatile(),
-  shellPayload: z.boolean().default(false).volatile(),
   wslDistro: z.string().default("").volatile(),
-  // Payload gate state is read once per process (paths resolve at startup), so
-  // these are deliberately NOT volatile: a flip needs the restart it implies.
-  enablePosixPayload: z.boolean().default(false),
-  payloadPosixPath: z.string().default(""),
   niuPath: z.string().default(""),
   shellNiu: z.boolean().default(true).volatile()
 });
@@ -304,8 +277,7 @@ type PathConfig = Partial<Pick<ConfigValues, "pwshPath" | "gitBashPath" | "msys2
 
 export function resolveAllPaths(
   config: PathConfig = {},
-  env: NodeJS.ProcessEnv = process.env,
-  payloadBash?: string
+  env: NodeJS.ProcessEnv = process.env
 ): ResolvedPaths {
   const pwsh = config.pwshPath && config.pwshPath.trim().length > 0
     ? config.pwshPath
@@ -322,10 +294,7 @@ export function resolveAllPaths(
   const niu = config.niuPath && config.niuPath.trim().length > 0
     ? config.niuPath
     : resolveFromCandidates(candidateNiuPaths(env));
-  // The payload is its OWN backend (first-class catalog row) - it never
-  // silently substitutes for the gitbash slot, so a row labelled "Git Bash"
-  // always names a shell the machine actually has.
-  return { pwsh, gitbash, msys2, wsl, niu, ...(payloadBash !== undefined ? { payload: payloadBash } : {}) };
+  return { pwsh, gitbash, msys2, wsl, niu };
 }
 
 // ---- argv / env construction ------------------------------------------------
@@ -346,10 +315,6 @@ export function buildArgv(
       // /usr/bin and /mingw64/bin on PATH. With a bare -c, `tr`, `sed`, `gcc`
       // and friends are all "command not found".
       return [paths.msys2, "-lc", command];
-    case "payload":
-      // Same login-shell rule as msys2/gitbash: the payload is a
-      // Git-for-Windows tree and `-lc` is what gives it a usable PATH.
-      return [paths.payload, "-lc", command];
     case "niu":
       // Same login-shell rule: -lc sources the profile chain so winuxcmd's
       // bin directory joins PATH. (niu has no MSYS runtime; see findings F2
@@ -648,7 +613,6 @@ export const SHELL_DESCRIPTIONS: Record<ShellId, string> = {
   gitbash: "Execute a bash command (Git for Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /d/WorkSpace; PATH includes /usr/bin and /mingw64/bin so git, npm, ssh etc. work; environment variables via $NAME.",
   msys2: "Execute a bash command (MSYS2 bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin and /mingw64/bin so git, npm, gcc, make etc. work; environment variables via $NAME. MSYS2 provides a full GCC/mingw64 toolchain.",
   wsl: "Execute a Linux bash command (wsl [-d <distro>] -e bash -lc <command>) and return its stdout/stderr. Linux syntax; Windows files under /mnt/d/...; environment variables via $NAME.",
-  payload: "Execute a bash command in the plugin's pinned POSIX runtime payload (a digest-verified Git-for-Windows bash -lc <command>) and return its stdout/stderr. POSIX syntax; paths like /c/...; PATH includes /usr/bin so git, npm, ssh etc. work; environment variables via $NAME. Use it only when the user has deliberately enabled the payload backend.",
   niu: "Execute a bash command (Niubash niu -lc <command>) and return its stdout/stderr. GNU bash 5.3 semantics; WinuxCmd applets (ls, cp, rm, grep, find, cat, sed, awk, ...) are on PATH; native Windows paths such as C:\\... are kept as-is while /c/... style arguments are translated; environment variables via $NAME. Niubash is a native binary with no MSYS emulation layer, so /dev/* redirects other than /dev/null do not exist; its startup file is ~/.niubashrc."
 };
 
@@ -830,18 +794,7 @@ export async function persistConfigValue(svc: unknown, path: readonly string[], 
 // ---- plugin -------------------------------------------------------------------
 
 export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = {}): void {
-  // Pinned backup POSIX runtime payload: opt-in, its OWN backend slot. A
-  // detected WSL distro is an advisory note only (the official menu lists both
-  // side by side, so our picker must not be stricter); the digest gate is the
-  // only hard no: an unverified payload simply does not run.
-  let payloadBash: string | undefined;
-  const payloadSuppressed = false;
-  if (config.enablePosixPayload === true && process.platform === "win32") {
-    const outcome = resolvePayloadBash({ payloadBashPath: config.payloadPosixPath ?? "" });
-    if (outcome.engaged) payloadBash = outcome.bashPath;
-    for (const note of outcome.notes) ctx.logger?.warn?.(`dsh-bash-terminal-ts: ${note}`);
-  }
-  const paths = resolveAllPaths(config, process.env, payloadBash);
+  const paths = resolveAllPaths(config, process.env);
   // 0.1.7: `defaultShell` is a `.volatile()` config field — the loader hands
   // `apply` a live ref and the latest value is resolved on every read; there
   // is no settings registration call anymore (removed with the 0.1.7 host).
@@ -881,8 +834,7 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     if (shell === "gitbash") return read(config.shellGitBash as boolean | undefined, true);
     if (shell === "msys2") return read(config.shellMsys2 as boolean | undefined, true);
     if (shell === "wsl") return read(config.shellWsl as boolean | undefined, true);
-    if (shell === "payload") return read(config.shellPayload as boolean | undefined, false);
-  if (shell === "niu") return read(config.shellNiu as boolean | undefined, true);
+    if (shell === "niu") return read(config.shellNiu as boolean | undefined, true);
     return false;
   };
   /**
@@ -910,7 +862,6 @@ export function apply(ctx: BashTerminalContext, config: Partial<ConfigValues> = 
     config: config as Record<string, unknown>,
     paths,
     configuredShell: storedShell,
-    payloadSuppressed: () => payloadSuppressed,
     persist: async (svc, path, value) => {
       await persistConfigValue(svc, path, value);
       // ≤0.1.6 hosts have no config hot-reload, so mirror a defaultShell write into
