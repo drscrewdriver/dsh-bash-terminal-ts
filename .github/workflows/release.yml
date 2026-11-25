@@ -90,16 +90,21 @@ jobs:
           fi
         shell: bash
 
-      # ⑥ 发布
+      # ⑥ 发布（rc 版本→ --tag rc，不动 latest）
       - name: npm publish
         if: steps.guard.outputs.exists == 'false' && (github.event_name == 'push' || inputs.dry_run == false)
-        run: npm publish --provenance --access public --registry https://registry.npmjs.org
         shell: bash
+        run: |
+          set -euo pipefail
+          case "$VERSION" in
+            *-rc*) echo "::notice::rc 版本 $VERSION → 发到 rc 标签"; npm publish --provenance --access public --tag rc --registry https://registry.npmjs.org ;;
+            *)     npm publish --provenance --access public --tag latest --registry https://registry.npmjs.org ;;
+          esac
 
-      # ⑦ dist-tag 同步
+      # ⑦ dist-tag 同步（rc 线跳过，不动 dsh-* 线标签）
       - name: 同步 dsh-* 线标签
         id: disttag
-        if: steps.guard.outputs.exists == 'false' && (github.event_name == 'push' || inputs.dry_run == false)
+        if: steps.guard.outputs.exists == 'false' && !contains(env.VERSION, '-rc') && (github.event_name == 'push' || inputs.dry_run == false)
         run: |
           set -uo pipefail
           REG=https://registry.npmjs.org
@@ -125,8 +130,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
-          gh release edit "$TAG" --latest
+          PRE_FLAG=""
+          case "$VERSION" in *-rc*) PRE_FLAG="--prerelease" ;; esac
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes $PRE_FLAG
+          case "$VERSION" in *-rc*) : ;; *) gh release edit "$TAG" --latest ;; esac
         shell: bash
 
       # ⑨ 事实表
