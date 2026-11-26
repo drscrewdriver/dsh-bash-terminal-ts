@@ -7777,46 +7777,28 @@ function pickLang() {
   }
   return STAR_COPY.en;
 }
-var STAR_CTA = {
-  zh: "\u7559\u9897 Star",
-  en: "Star",
-  ja: "\u30B9\u30BF\u30FC",
-  ko: "\uC2A4\uD0C0",
-  fr: "Star",
-  de: "Stern",
-  it: "Stella",
-  ru: "\u0417\u0432\u0435\u0437\u0434\u0430",
-  es: "Estrella",
-  pt: "Estrela"
+var STAR_VERSION = "0.9.5";
+var STAR_FOOT_COPY = {
+  zh: { ask: "\u89C9\u5F97\u597D\u7528\uFF1F", star: "\u53BB GitHub \u70B9\u4E2A Star", issue: "\u53CD\u9988\u5EFA\u8BAE / \u63D0 issue" },
+  en: { ask: "Finding it useful?", star: "Star on GitHub", issue: "Feedback / open an issue" },
+  ja: { ask: "\u304A\u5F79\u306B\u7ACB\u3063\u3066\u3044\u307E\u3059\u304B\uFF1F", star: "GitHub \u3067\u30B9\u30BF\u30FC", issue: "\u3054\u610F\u898B\u30FB\u4E0D\u5177\u5408\u5831\u544A" },
+  ko: { ask: "\uC720\uC6A9\uD55C\uAC00\uC694?", star: "GitHub \uC5D0\uC11C \uC2A4\uD0C0", issue: "\uD53C\uB4DC\uBC31 / \uC774\uC288 \uC5F4\uAE30" },
+  fr: { ask: "Utile ?", star: "Une \xE9toile sur GitHub", issue: "Retour / ouvrir un ticket" },
+  de: { ask: "Hilfreich?", star: "Stern auf GitHub", issue: "Feedback / Issue \xF6ffnen" },
+  it: { ask: "Ti \xE8 utile?", star: "Stella su GitHub", issue: "Feedback / apri una issue" },
+  ru: { ask: "\u041F\u043E\u043B\u0435\u0437\u043D\u043E?", star: "\u0417\u0432\u0435\u0437\u0434\u0430 \u043D\u0430 GitHub", issue: "\u041E\u0442\u0437\u044B\u0432 / \u043E\u0442\u043A\u0440\u044B\u0442\u044C issue" },
+  es: { ask: "\xBFTe resulta \xFAtil?", star: "Danos una estrella", issue: "Sugerencias / abrir issue" },
+  pt: { ask: "Achou \xFAtil?", star: "D\xEA uma estrela no GitHub", issue: "Feedback / abrir uma issue" }
 };
-var STAR_HIDE = {
-  zh: "\u4E0D\u518D\u63D0\u793A",
-  en: "Dismiss",
-  ja: "\u4ECA\u5F8C\u8868\u793A\u3057\u306A\u3044",
-  ko: "\uB2E4\uC2DC \uBCF4\uC9C0 \uC54A\uAE30",
-  fr: "Masquer",
-  de: "Ausblenden",
-  it: "Nascondi",
-  ru: "\u0421\u043A\u0440\u044B\u0442\u044C",
-  es: "Ocultar",
-  pt: "Ocultar"
-};
-var STAR_S_STYLE_ID = "dsh-star-row-s-style";
-var STAR_S_STYLE = [
-  ".dsh-star-row-s{display:flex;align-items:center;gap:8px;flex-wrap:wrap;",
-  "font-size:12px;line-height:1.5;color:inherit;opacity:.75;margin-top:10px;",
-  "padding-top:8px;border-top:1px solid var(--dsw-alias-border-l2,currentColor)}",
-  ".dsh-star-row-s:hover{opacity:1}",
-  ".dsh-star-link{display:inline-flex;align-items:center;gap:6px;",
-  "color:inherit;text-decoration:none}",
-  ".dsh-star-link:hover{text-decoration:underline}",
-  ".dsh-star-link svg{width:14px;height:14px;flex:none;display:block}",
-  ".dsh-star-row-s .dsh-star-ask{opacity:.85;font-weight:400}",
-  ".dsh-star-cta,.dsh-star-hide{font:inherit;font-size:11px;line-height:1;",
-  "padding:4px 9px;border-radius:999px;border:1px solid currentColor;",
-  "background:transparent;color:inherit;cursor:pointer;flex:none;opacity:.7}",
-  ".dsh-star-hide{padding:4px 7px}",
-  ".dsh-star-cta:hover,.dsh-star-hide:hover{opacity:1}"
+var STAR_FOOT_STYLE_ID = "dsh-star-foot-style";
+var STAR_FOOT_STYLE = [
+  ".dsh-star-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;",
+  "font-size:12px;line-height:1.6;color:inherit;opacity:.72;margin-top:10px}",
+  ".dsh-star-foot:hover{opacity:1}",
+  ".dsh-star-foot .dsh-star-ver{opacity:.6;font-variant-numeric:tabular-nums}",
+  ".dsh-star-foot .dsh-star-dot{opacity:.4}",
+  ".dsh-star-foot a{color:inherit;text-decoration:none}",
+  ".dsh-star-foot a:hover{text-decoration:underline}"
 ].join("");
 function starLang() {
   const tag = typeof document !== "undefined" && document.documentElement.lang || "";
@@ -7824,72 +7806,77 @@ function starLang() {
   for (const cand of STAR_LANGS) if (low.startsWith(cand)) return cand;
   return "en";
 }
+var STAR_DISMISS_KEY = "dsh.star." + STAR_NS + ".v2.dismissed";
+var STAR_DISMISS_KEY_V1 = "dsh.star." + STAR_NS + ".dismissed";
 function starDismissed() {
   try {
-    return localStorage.getItem("dsh.star." + STAR_NS + ".dismissed") === "1";
+    if (localStorage.getItem(STAR_DISMISS_KEY_V1) !== null) {
+      localStorage.removeItem(STAR_DISMISS_KEY_V1);
+    }
+    return localStorage.getItem(STAR_DISMISS_KEY) === "1";
   } catch {
     return false;
   }
 }
 function starDismiss() {
   try {
-    localStorage.setItem("dsh.star." + STAR_NS + ".dismissed", "1");
+    localStorage.setItem(STAR_DISMISS_KEY, "1");
   } catch {
   }
 }
-function injectStarSStyle(d) {
-  if (d.getElementById(STAR_S_STYLE_ID)) return;
+function injectFootStyle(d) {
+  if (d.getElementById(STAR_FOOT_STYLE_ID)) return;
   const style = d.createElement("style");
-  style.id = STAR_S_STYLE_ID;
-  style.textContent = STAR_S_STYLE;
+  style.id = STAR_FOOT_STYLE_ID;
+  style.textContent = STAR_FOOT_STYLE;
   d.head.appendChild(style);
 }
-function openRepo(d) {
-  const a = d.createElement("a");
-  a.href = REPO_URL;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  a.click();
+function footItem(d, tag, text, href) {
+  const el = d.createElement(tag);
+  el.className = "dsh-star-ask";
+  if (tag === "a" && href) {
+    const a = el;
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+  }
+  el.textContent = text;
+  return el;
 }
-function extendedStarRow(link, d) {
+function footDot(d) {
+  const dot = d.createElement("span");
+  dot.className = "dsh-star-dot";
+  dot.textContent = "\xB7";
+  return dot;
+}
+function extendedStarRow(neutral, d) {
   if (STAR_VARIANT !== "S") return null;
-  if (starDismissed()) return link;
-  injectStarSStyle(d);
-  link.className = "dsh-star-link";
-  const lang = starLang();
+  if (starDismissed()) return null;
+  injectFootStyle(d);
+  const copy = STAR_FOOT_COPY[starLang()] ?? STAR_FOOT_COPY.en;
+  const issuesUrl = REPO_URL.replace(/\/+$/, "") + "/issues/new";
   const row = d.createElement("div");
-  row.className = "dsh-star-row-s";
-  row.appendChild(link);
-  const ask = d.createElement("span");
-  ask.className = "dsh-star-ask";
-  ask.textContent = STAR_COPY[lang].ask;
-  row.appendChild(ask);
-  const cta = d.createElement("button");
-  cta.type = "button";
-  cta.className = "dsh-star-cta";
-  cta.textContent = "\u2605 " + STAR_CTA[lang];
-  cta.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openRepo(d);
-  });
-  row.appendChild(cta);
-  const hide = d.createElement("button");
-  hide.type = "button";
-  hide.className = "dsh-star-hide";
-  hide.textContent = "\xD7";
-  hide.title = STAR_HIDE[lang];
-  hide.setAttribute("aria-label", STAR_HIDE[lang]);
-  hide.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
+  row.className = "dsh-star-foot";
+  const ver = d.createElement("span");
+  ver.className = "dsh-star-ver";
+  ver.textContent = "v" + STAR_VERSION;
+  row.appendChild(ver);
+  row.appendChild(footDot(d));
+  row.appendChild(footItem(d, "span", copy.ask));
+  const star = footItem(d, "a", "\u2B50 " + copy.star, REPO_URL);
+  const issue = footItem(d, "a", "\u{1F4AC} " + copy.issue, issuesUrl);
+  row.appendChild(star);
+  row.appendChild(footDot(d));
+  row.appendChild(issue);
+  const collapse = () => {
     starDismiss();
     if (row.parentNode) {
-      row.parentNode.replaceChild(link, row);
-      link.className = "dsh-star-row";
+      neutral.className = "dsh-star-row";
+      row.parentNode.replaceChild(neutral, row);
     }
-  });
-  row.appendChild(hide);
+  };
+  star.addEventListener("click", collapse);
+  issue.addEventListener("click", collapse);
   return row;
 }
 function mountStarRow(doc) {
