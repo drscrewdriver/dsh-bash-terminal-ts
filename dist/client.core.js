@@ -7737,6 +7737,194 @@ function MultiShellTerminal(props) {
   ] });
 }
 
+// src/webterminals/browser/star-row-copy.ts
+var REPO_URL = "https://github.com/drscrewdriver/dsh-bash-terminal-ts";
+var STAR_NS = "bash-terminal";
+var STAR_VARIANT = "S";
+var STAR_COPY = {
+  zh: { ask: "\u89C9\u5F97\u7701\u4E8B\u4E86\uFF1F\u4E00\u9897 Star \u8BA9\u5DE5\u5177\u88AB\u66F4\u591A\u4EBA\u770B\u89C1" },
+  en: { ask: "Finding it handy? A star helps more people discover this tool" },
+  ja: { ask: "\u4FBF\u5229\u3067\u3057\u305F\u3089\u2B50\u3067\u3001\u3053\u306E\u30C4\u30FC\u30EB\u304C\u3082\u3063\u3068\u5C4A\u304D\u307E\u3059" },
+  ko: { ask: "\uC720\uC6A9\uD588\uB2E4\uBA74 \u2B50 \uD558\uB098\uB85C \uB354 \uB9CE\uC740 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uB2FF\uC2B5\uB2C8\uB2E4" },
+  fr: { ask: "Utile ? Une \xE9toile aide cet outil \xE0 \xEAtre d\xE9couvert" },
+  de: { ask: "N\xFCtzlich? Ein Stern hilft dem Tool, gesehen zu werden" },
+  it: { ask: "Ti \xE8 utile? Una stella aiuta questo tool a farsi scoprire" },
+  ru: { ask: "\u041F\u0440\u0438\u0433\u043E\u0434\u0438\u043B\u043E\u0441\u044C? \u0417\u0432\u0435\u0437\u0434\u0430 \u043F\u043E\u043C\u043E\u0436\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0435\u043C\u0443 \u0447\u0438\u0441\u043B\u0443 \u043B\u044E\u0434\u0435\u0439 \u0443\u0437\u043D\u0430\u0442\u044C \u043E tool" },
+  es: { ask: "\xBFTe resulta \xFAtil? Una estrella ayuda a que m\xE1s gente lo descubra" },
+  pt: { ask: "Achou \xFAtil? Uma estrela ajuda mais pessoas a descobrir a ferramenta" }
+};
+var STAR_LANGS = ["zh", "en", "ja", "ko", "fr", "de", "it", "ru", "es", "pt"];
+var GITHUB_MARK_PATH = "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332 -5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12";
+var STYLE_ID = "dsh-star-row-style";
+var STYLE_CSS = [
+  ".dsh-star-row{display:flex;align-items:center;gap:7px;font-size:12px;",
+  "line-height:1.5;color:inherit;text-decoration:none;opacity:.72;padding:3px 0;",
+  "margin-top:6px;min-width:0;flex-wrap:wrap}",
+  ".dsh-star-row:hover{opacity:1;text-decoration:underline}",
+  ".dsh-star-row svg{width:14px;height:14px;flex:none;display:block}",
+  ".dsh-star-row .dsh-star-ask{opacity:.85;font-weight:400}"
+].join("");
+function pickLang() {
+  const tag = typeof document !== "undefined" && document.documentElement.lang || "";
+  const low = tag.toLowerCase();
+  for (const cand of STAR_LANGS) {
+    if (low.startsWith(cand)) return STAR_COPY[cand];
+  }
+  return STAR_COPY.en;
+}
+var STAR_CTA = {
+  zh: "\u7559\u9897 Star",
+  en: "Star",
+  ja: "\u30B9\u30BF\u30FC",
+  ko: "\uC2A4\uD0C0",
+  fr: "Star",
+  de: "Stern",
+  it: "Stella",
+  ru: "\u0417\u0432\u0435\u0437\u0434\u0430",
+  es: "Estrella",
+  pt: "Estrela"
+};
+var STAR_HIDE = {
+  zh: "\u4E0D\u518D\u63D0\u793A",
+  en: "Dismiss",
+  ja: "\u4ECA\u5F8C\u8868\u793A\u3057\u306A\u3044",
+  ko: "\uB2E4\uC2DC \uBCF4\uC9C0 \uC54A\uAE30",
+  fr: "Masquer",
+  de: "Ausblenden",
+  it: "Nascondi",
+  ru: "\u0421\u043A\u0440\u044B\u0442\u044C",
+  es: "Ocultar",
+  pt: "Ocultar"
+};
+var STAR_S_STYLE_ID = "dsh-star-row-s-style";
+var STAR_S_STYLE = [
+  ".dsh-star-row-s{display:flex;align-items:center;gap:8px;flex-wrap:wrap;",
+  "font-size:12px;line-height:1.5;color:inherit;opacity:.75;margin-top:10px;",
+  "padding-top:8px;border-top:1px solid rgba(127,127,127,.25)}",
+  ".dsh-star-row-s:hover{opacity:1}",
+  ".dsh-star-link{display:inline-flex;align-items:center;gap:6px;",
+  "color:inherit;text-decoration:none}",
+  ".dsh-star-link:hover{text-decoration:underline}",
+  ".dsh-star-link svg{width:14px;height:14px;flex:none;display:block}",
+  ".dsh-star-row-s .dsh-star-ask{opacity:.85;font-weight:400}",
+  ".dsh-star-cta,.dsh-star-hide{font:inherit;font-size:11px;line-height:1;",
+  "padding:4px 9px;border-radius:999px;border:1px solid currentColor;",
+  "background:transparent;color:inherit;cursor:pointer;flex:none;opacity:.7}",
+  ".dsh-star-hide{padding:4px 7px}",
+  ".dsh-star-cta:hover,.dsh-star-hide:hover{opacity:1}"
+].join("");
+function starLang() {
+  const tag = typeof document !== "undefined" && document.documentElement.lang || "";
+  const low = tag.toLowerCase();
+  for (const cand of STAR_LANGS) if (low.startsWith(cand)) return cand;
+  return "en";
+}
+function starDismissed() {
+  try {
+    return localStorage.getItem("dsh.star." + STAR_NS + ".dismissed") === "1";
+  } catch {
+    return false;
+  }
+}
+function starDismiss() {
+  try {
+    localStorage.setItem("dsh.star." + STAR_NS + ".dismissed", "1");
+  } catch {
+  }
+}
+function injectStarSStyle(d) {
+  if (d.getElementById(STAR_S_STYLE_ID)) return;
+  const style = d.createElement("style");
+  style.id = STAR_S_STYLE_ID;
+  style.textContent = STAR_S_STYLE;
+  d.head.appendChild(style);
+}
+function openRepo(d) {
+  const a = d.createElement("a");
+  a.href = REPO_URL;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.click();
+}
+function extendedStarRow(link, d) {
+  if (STAR_VARIANT !== "S") return null;
+  if (starDismissed()) return link;
+  injectStarSStyle(d);
+  link.className = "dsh-star-link";
+  const lang = starLang();
+  const row = d.createElement("div");
+  row.className = "dsh-star-row-s";
+  row.appendChild(link);
+  const ask = d.createElement("span");
+  ask.className = "dsh-star-ask";
+  ask.textContent = STAR_COPY[lang].ask;
+  row.appendChild(ask);
+  const cta = d.createElement("button");
+  cta.type = "button";
+  cta.className = "dsh-star-cta";
+  cta.textContent = "\u2605 " + STAR_CTA[lang];
+  cta.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openRepo(d);
+  });
+  row.appendChild(cta);
+  const hide = d.createElement("button");
+  hide.type = "button";
+  hide.className = "dsh-star-hide";
+  hide.textContent = "\xD7";
+  hide.title = STAR_HIDE[lang];
+  hide.setAttribute("aria-label", STAR_HIDE[lang]);
+  hide.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    starDismiss();
+    if (row.parentNode) {
+      row.parentNode.replaceChild(link, row);
+      link.className = "dsh-star-row";
+    }
+  });
+  row.appendChild(hide);
+  return row;
+}
+function mountStarRow(doc) {
+  const d = doc ?? document;
+  if (!d.getElementById(STYLE_ID)) {
+    const tag = d.createElement("style");
+    tag.id = STYLE_ID;
+    tag.textContent = STYLE_CSS;
+    d.head.appendChild(tag);
+  }
+  const match = REPO_URL.match(/github\.com\/([^/]+\/[^/#?]+)/);
+  const repo = match ? match[1] : "drscrewdriver";
+  const a = d.createElement("a");
+  a.className = "dsh-star-row";
+  a.href = REPO_URL;
+  a.target = "_blank";
+  a.rel = "noreferrer";
+  a.dataset.starNs = STAR_NS;
+  const svg = d.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const path = d.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("fill", "currentColor");
+  path.setAttribute("d", GITHUB_MARK_PATH);
+  svg.appendChild(path);
+  a.appendChild(svg);
+  const label = d.createElement("span");
+  label.textContent = repo;
+  a.appendChild(label);
+  const row = extendedStarRow(a, d);
+  if (row) return row;
+  if (STAR_VARIANT === "A") {
+    const ask = d.createElement("span");
+    ask.className = "dsh-star-ask";
+    ask.textContent = pickLang().ask;
+    a.appendChild(ask);
+  }
+  return a;
+}
+
 // src/client.tsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
 var SETTINGS_NS = "settings.bash-terminal";
@@ -7990,7 +8178,10 @@ function ShellDockSection() {
 function SettingsBody() {
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ShellPreferenceRow, {}),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ShellDockSection, {})
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ShellDockSection, {}),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { ref: (node) => {
+      if (node && !node.firstChild) node.appendChild(mountStarRow());
+    } })
   ] });
 }
 var hostSettingsSurface = "unknown";

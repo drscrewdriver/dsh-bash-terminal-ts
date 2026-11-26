@@ -37,6 +37,7 @@ import { ShellPicker } from "./webterminals/browser/shell-picker";
 import { switchableRows } from "./webterminals/browser/xterm";
 import { post, readConfig, readLegacyConfig, writeDefaultShell, writeLegacyDefault } from "./webterminals/browser/api";
 import type { CatalogEntry, ConfigSnapshot } from "./webterminals/browser/api";
+import { mountStarRow } from './webterminals/browser/star-row-copy'
 
 const SETTINGS_NS = "settings.bash-terminal";
 const SHELLS = ["powershell", "gitbash", "msys2", "wsl", "niu"] as const;
@@ -468,6 +469,7 @@ function SettingsBody() {
     <>
       <ShellPreferenceRow />
       <ShellDockSection />
+      <span ref={(node: HTMLElement | null) => { if (node && !node.firstChild) node.appendChild(mountStarRow()) }} />
     </>
   );
 }
